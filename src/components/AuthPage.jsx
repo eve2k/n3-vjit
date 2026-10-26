@@ -83,7 +83,7 @@ export default function AuthPage({ mode = 'login' }) {
         {mode === 'login' && <Link to="/forgot-password" className="text-link auth-forgot-link">Quên mật khẩu?</Link>}
         <button type="submit" className="btn btn-primary auth-submit" disabled={busy || !configured}>{busy ? 'Đang xử lý…' : copy.action}<ArrowRight size={17} aria-hidden="true" /></button>
       </form>}
-      {confirmationSent && <button type="button" className="btn btn-secondary w-full mt-3" disabled={busy} onClick={resend}>Gửi lại email xác nhận</button>}
+      {(confirmationSent || mode === 'register') && <button type="button" className="btn btn-secondary w-full mt-3" disabled={busy} onClick={resend}>{mode === 'register' && !confirmationSent ? 'Chưa nhận email xác minh? Gửi lại' : 'Gửi lại email xác nhận'}</button>}
       {!['login', 'register'].includes(mode) && <Link to="/login" className="text-link mt-5"><ArrowLeft size={15} aria-hidden="true" />Trở về đăng nhập</Link>}
       <p className="auth-footer">Khách có thể học thử; đăng nhập trước khi học để lưu tiến độ.</p>
     </section>
