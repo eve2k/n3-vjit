@@ -19,9 +19,9 @@ Folder ID: `n3-vjit-webapp`, nhãn **N3 VJIT - source**, đồng bộ hai chiề
 - `.git`, log, cache Supabase CLI.
 - `.env`, `.env.*` (trừ `.env.example`), các tệp `*.local`.
 
-Không sao chép `node_modules` giữa hai máy. Server hiện có Node.js và bản chạy thử, mở từ laptop code qua SSH tunnel tại `http://127.0.0.1:4173`; cổng LAN 4173 còn bị UFW chặn. Xem [cách truy cập, build lại và quản lý dịch vụ](deploy/LAN_PREVIEW.md). File `.env.local` của server được cấu hình riêng.
+Không sao chép `node_modules` giữa hai máy. Server hiện có Node.js và Caddy, đã mở UFW cho cổng 4173. Trong cùng LAN dùng `http://192.168.1.105:4173`; đường hầm SSH cũ tại `http://127.0.0.1:4173` vẫn dùng được nếu còn chạy. File `.env.local` của server được cấu hình riêng.
 
-Website hiện phục vụ bằng Caddy, đã cấu hình domain `chungchitiengnhatvjit.duckdns.org:4173`. Xem [thiết lập DuckDNS và mở UFW](deploy/DUCKDNS.md) để truy cập trực tiếp từ Internet.
+Website đã được kiểm tra truy cập từ Internet qua `http://chungchitiengnhatvjit.duckdns.org:4173`. Xem [thiết lập DuckDNS và quản lý dịch vụ](deploy/DUCKDNS.md). Nếu domain không mở được từ chính LAN nhưng 4G vẫn vào được, dùng IP LAN vì router có thể không hỗ trợ NAT loopback.
 
 Syncthing không truyền quyền file (`ignorePerms` được bật) để mỗi máy giữ quyền phù hợp với người dùng chạy dịch vụ. Giữ tối đa 5 phiên bản trước của tệp bị thay đổi/xóa bởi máy bên kia trong `.stversions`; đây không thay thế bản sao lưu độc lập.
 

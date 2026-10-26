@@ -12,7 +12,7 @@ Domain được kiểm tra trỏ về IP công khai `42.115.33.237` tại thời
 
 1. **DuckDNS:** bản ghi A phải trùng IP WAN hiện tại. Nếu IP Internet thay đổi, DuckDNS cần được cập nhật bằng router hoặc một tác vụ dùng token riêng. Phiên thiết lập này chưa cấu hình tác vụ cập nhật IP tự động và không cần token để phục vụ domain đang trỏ đúng IP.
 2. **Router:** TCP ngoài `4173` chuyển đến `192.168.1.105:4173`. Nên giữ IP LAN của laptop server ổn định bằng DHCP reservation.
-3. **Firewall server:** UFW phải cho phép TCP `4173`. Tài khoản `eve` hiện không được dùng sudo, nên cần root/tài khoản quản trị chạy:
+3. **Firewall server:** UFW đã cho phép TCP `4173` cho IPv4/IPv6, được thiết lập bằng root qua `su`. Firewall vẫn bật và các quy tắc khác được giữ nguyên. Khi cần thiết lập lại trên máy khác, dùng root/tài khoản quản trị:
 
 ```bash
 sudo ufw allow 4173/tcp
@@ -27,7 +27,7 @@ Sau đó kiểm tra bằng 4G hoặc mạng khác:
 http://chungchitiengnhatvjit.duckdns.org:4173
 ```
 
-Một số router không hỗ trợ truy cập IP WAN từ chính LAN (NAT loopback), nên thử bằng 4G để phân biệt với lỗi port forwarding/firewall.
+Kiểm tra ngày 26/10/2026: truy cập từ một máy ngoài Internet trả về **HTTP 200**; các route `/`, `/quiz`, `/exam`, `/login` qua IP LAN cũng trả về 200. Domain qua IP WAN vẫn timeout khi kiểm tra từ chính LAN, trong khi bên ngoài truy cập được; đây có thể là giới hạn NAT loopback của router. Trong cùng Wi-Fi dùng `http://192.168.1.105:4173`, hoặc dùng 4G/mạng khác để kiểm tra domain.
 
 ## Dịch vụ trên server
 
