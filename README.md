@@ -64,3 +64,7 @@ Mật khẩu chỉ được gửi đến Supabase Auth qua HTTPS, không lưu tr
 Khi lưu lên tài khoản, ứng dụng kiểm tra mốc cập nhật của bản lưu để phát hiện thay đổi từ thiết bị khác. Khi tải hoặc gộp tiến độ, dữ liệu được kiểm tra trước khi thay thế; tiến độ khách và tài khoản khác không bị thay đổi. SQL migration không tự chạy khi build frontend.
 
 Tài liệu tham khảo: [Supabase Auth REST API](https://github.com/supabase/auth/blob/master/openapi.yaml), [xác thực bằng mật khẩu](https://supabase.com/docs/guides/auth/passwords), [RLS](https://supabase.com/docs/guides/database/postgres/row-level-security).
+
+## Email nhắc giờ học
+
+Trang Tài khoản có lịch nhắc theo ngày, giờ và múi giờ, mặc định tắt. Cần triển khai Supabase Edge Function + Cron và cấu hình Resend trước khi người học có thể bật email. Không cần dịch vụ email để chạy các tính năng học khác. Xem [hướng dẫn đầy đủ](supabase/REMINDERS.md); mã nguồn không chứa API key gửi email, và build frontend không tự tạo lịch hay gửi thư.

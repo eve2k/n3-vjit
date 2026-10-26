@@ -191,6 +191,15 @@ export function createAuthClient({ url = '', publicKey = '', storage, fetchImpl 
       const rows = await authorizedRequest(`/rest/v1/n3vjit_study_progress?${query}`)
       return rows?.[0] || null
     },
+    async loadStudyReminder() {
+      return authorizedRequest('/rest/v1/rpc/n3vjit_get_reminder', { method: 'POST', body: {} })
+    },
+    async saveStudyReminder(settings) {
+      return authorizedRequest('/rest/v1/rpc/n3vjit_save_reminder', { method: 'POST', body: {
+        p_enabled: settings.enabled, p_local_time: settings.local_time,
+        p_timezone: settings.timezone, p_weekdays: settings.weekdays,
+      } })
+    },
     async saveProgress(data, updatedAt = null) {
       const current = await validSession()
       const query = new URLSearchParams({ user_id: `eq.${current.user.id}` })

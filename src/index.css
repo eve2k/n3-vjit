@@ -504,3 +504,15 @@ input, select, textarea { accent-color: var(--accent); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
 }
+.reminder-form { display: grid; gap: 16px; margin-top: 20px; }
+.reminder-fields { border: 0; padding: 0; margin: 0; display: grid; gap: 20px; min-width: 0; }
+.reminder-toggle { display: flex; align-items: center; gap: 10px; font-weight: 600; }
+.reminder-form input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); }
+.reminder-time-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.reminder-time-grid label { display: grid; gap: 8px; }
+.reminder-time-grid input { min-width: 0; width: 100%; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); color: var(--text); color-scheme: inherit; }
+.reminder-days { display: flex; flex-wrap: wrap; gap: 10px; border: 0; padding: 0; margin: 0; }
+.reminder-days legend { margin-bottom: 10px; }
+.reminder-days label { display: flex; gap: 6px; align-items: center; padding: 8px; border: 1px solid var(--line); border-radius: 8px; }
+.reminder-fields > .btn { justify-self: start; }
+@media (max-width: 600px) { .reminder-time-grid { grid-template-columns: 1fr; } }

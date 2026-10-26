@@ -1,0 +1,6 @@
+project_id = "n3-vjit-webapp"
+
+# Cron uses a separate shared secret, and unsubscribe uses a scoped opaque token.
+# Every sending request is authenticated by the handler; public keys cannot trigger it.
+[functions.study-reminders]
+verify_jwt = false
