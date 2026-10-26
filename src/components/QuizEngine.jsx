@@ -10,6 +10,7 @@ import { effectiveReviewDue } from '../utils/studyRoadmap.js'
 import StudyRoadmap from './StudyRoadmap.jsx'
 import { useAuth } from '../context/authContext.js'
 import useQuestionShortcuts from '../hooks/useQuestionShortcuts.js'
+import { createId } from '../utils/id.js'
 
 const quizKeys = new Set(allQuizQuestions.map(srsKey))
 function prepareSession(mode, sectionId, now) {
@@ -67,7 +68,7 @@ export default function QuizEngine({ mistakeMode = false }) {
     const next = prepareSession(mode, sectionId, timestamp)
     setNow(timestamp)
     if (!next.questions.length) return
-    setSessionId(crypto.randomUUID())
+    setSessionId(createId())
     answered.current = {}
     setQuestions(next.questions); setAnswers({}); setOutcomes({}); setIndex(0); setNotice(null); setStarted(true)
     clearPending()

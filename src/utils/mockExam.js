@@ -1,6 +1,7 @@
 import { allQuizQuestions, dokkai, choukai, kaiwaSakubun } from '../data/index.js'
 import { gradeExam } from './learning.js'
 import { addWrongQuestion, getQuizHistory, markDokkaiCompleted, markQuestionCompleted, markWrongQuestionCorrect, saveQuizAttempt } from './storage.js'
+import { createId } from './id.js'
 
 export const EXAM_PASS_SCORE = 3
 export const EXAM_MAX_SCORE = 10
@@ -29,7 +30,7 @@ function sample(items, count, random) {
 
 export function createMockExam(random = Math.random) {
   return {
-    id: globalThis.crypto.randomUUID(),
+    id: createId(),
     reading: sample(allQuizQuestions, 35, random),
     passages: sample(dokkai, 2, random),
     listening: sample(listeningBank, 30, random),

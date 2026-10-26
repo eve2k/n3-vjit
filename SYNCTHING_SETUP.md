@@ -19,7 +19,7 @@ Folder ID: `n3-vjit-webapp`, nhãn **N3 VJIT - source**, đồng bộ hai chiề
 - `.git`, log, cache Supabase CLI.
 - `.env`, `.env.*` (trừ `.env.example`), các tệp `*.local`.
 
-Không sao chép `node_modules` giữa hai máy. Khi triển khai, cài Node.js phù hợp trên server, chạy `npm ci`, cấu hình `.env.local` riêng tại server rồi `npm run build`. Bộ build và máy chủ web chưa được cài bằng bước thiết lập Syncthing này.
+Không sao chép `node_modules` giữa hai máy. Server hiện có Node.js và bản chạy thử, mở từ laptop code qua SSH tunnel tại `http://127.0.0.1:4173`; cổng LAN 4173 còn bị UFW chặn. Xem [cách truy cập, build lại và quản lý dịch vụ](deploy/LAN_PREVIEW.md). File `.env.local` của server được cấu hình riêng.
 
 Syncthing không truyền quyền file (`ignorePerms` được bật) để mỗi máy giữ quyền phù hợp với người dùng chạy dịch vụ. Giữ tối đa 5 phiên bản trước của tệp bị thay đổi/xóa bởi máy bên kia trong `.stversions`; đây không thay thế bản sao lưu độc lập.
 
