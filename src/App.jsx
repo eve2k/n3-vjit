@@ -1,10 +1,10 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import Navbar from './components/Navbar.jsx'
-import Dashboard from './components/Dashboard.jsx'
 import { getTheme } from './utils/storage.js'
 import { useAuth } from './context/authContext.js'
 
+const Dashboard = lazy(() => import('./components/Dashboard.jsx'))
 const QuizEngine = lazy(() => import('./components/QuizEngine.jsx'))
 const MockExam = lazy(() => import('./components/MockExam.jsx'))
 const DokkaiView = lazy(() => import('./components/DokkaiView.jsx'))

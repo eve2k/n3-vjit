@@ -39,6 +39,10 @@ Repository chỉ cần mã nguồn, tài nguyên trong `public/`, cấu hình v�
 
 ## Tiến độ học tập
 
+- **Luyện câu hỏi theo lộ trình tới ngày thi:** ghi nhận ngày bắt đầu theo tài khoản, chọn ngày thi và tự chia lượng câu mới theo phần chưa học/số ngày còn lại. Có dự kiến 7 ngày và giai đoạn cuối để củng cố; nghỉ vài ngày sẽ tính lại khối lượng.
+- Lộ trình chừa ngày thi thử và chữa đề, không giao câu mới vào các ngày đó. Mốc 21/11/2026 mặc định có thi thử 15/11, 18/11 và chữa đề 16/11, 19/11. Lịch ngắn sẽ giảm số đề; ngày thi thử chỉ gợi ý thêm một phiên ôn nhanh tối đa 10 câu.
+- Mỗi phiên tối đa 20 câu, ưu tiên câu đến hạn. Đúng khi đến hạn thì giãn lịch 1 → 3 → 7 → 14 → 30 → 60 ngày; sai hẹn ôn lại sau 10 phút. Lịch dài được đưa về các mốc củng cố trước thi. Xem [cách tính lộ trình và SRS](supabase/STUDY_ROADMAP.md).
+
 - Trang tổng quan có tiến độ riêng từng chuyên đề, nút học tiếp và 5 kết quả thi gần nhất.
 - Câu bỏ trống không được đánh dấu là đã hoàn thành; kết quả thi lưu cả thời gian làm bài.
 - Sổ tay câu sai hỗ trợ câu trắc nghiệm, đọc hiểu và các câu nghe có đáp án. Trả lời đúng trong 2 lượt ôn để bỏ câu khỏi sổ tay.

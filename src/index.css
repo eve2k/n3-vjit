@@ -507,6 +507,33 @@ input, select, textarea { accent-color: var(--accent); }
 .reminder-form { display: grid; gap: 16px; margin-top: 20px; }
 .sync-status { display: inline-flex; gap: 7px; align-items: center; color: var(--muted); font-size: 12px; }
 .guest-notice { padding-top: 18px; padding-bottom: 0; }
+.srs-plan { padding: 28px; }
+.roadmap-panel { margin-bottom: 24px; }
+.roadmap-panel .account-section-heading h2 { margin-top: 0; }
+.roadmap-panel .account-section-heading p { color: var(--muted); font-size: 13px; }
+.roadmap-date-form { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; margin-top: 20px; }
+.roadmap-date-form label { display: grid; gap: 8px; font-size: 13px; }
+.roadmap-date-form input { border: 1px solid var(--line); background: var(--card); color: var(--text); border-radius: 8px; padding: 10px 12px; }
+.roadmap-forecast { margin-top: 24px; }
+.roadmap-forecast h3 { font-weight: 600; margin-bottom: 12px; }
+.roadmap-table-scroll { overflow-x: auto; }
+.roadmap-forecast table { width: 100%; min-width: 440px; border-collapse: collapse; font-size: 13px; }
+.roadmap-forecast th, .roadmap-forecast td { text-align: left; padding: 10px; border-bottom: 1px solid var(--line); }
+.roadmap-forecast th { background: var(--bg); color: var(--muted); font-weight: 600; }
+.roadmap-exam-dates { margin-top: 24px; border-top: 1px solid var(--line); padding-top: 16px; }
+.roadmap-exam-dates h3 { font-weight: 600; margin-bottom: 10px; }
+.roadmap-exam-dates > p { margin-top: 8px; font-size: 13px; }
+.srs-plan h2 { font-size: 23px; font-weight: 700; margin: 18px 0 8px; }
+.srs-plan > p { color: var(--muted); margin-top: 10px; }
+.srs-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 24px 0; }
+.srs-metrics > div { padding: 16px; border-radius: 12px; background: var(--bg); border: 1px solid var(--line); }
+.srs-metrics strong { display: block; font-size: 28px; color: var(--text); line-height: 1.3; }
+.srs-metrics span { font-size: 12px; color: var(--muted); }
+.srs-explanation { margin-top: 24px; border-top: 1px solid var(--line); padding-top: 16px; color: var(--muted); font-size: 13px; }
+.srs-explanation summary { color: var(--text); font-weight: 600; }
+.srs-explanation p { margin-top: 12px; }
+.review-schedule { border-top: 1px solid currentColor; padding-top: 10px; margin-top: 12px; font-size: 13px; }
+@media (max-width: 600px) { .srs-plan { padding: 20px; } .srs-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .sync-status[data-status="synced"] { color: var(--ok); }
 .sync-status[data-status="error"], .sync-status[data-status="offline"] { color: var(--warning); }
 @media (max-width: 700px) { .sync-status-compact > span { display: none; } }

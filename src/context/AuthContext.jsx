@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { AuthContext } from './authContext.js'
 import { authClient } from '../services/auth.js'
-import { parseProgressBackup, readProgressSnapshot, setStorageUser, writeProgressSnapshot } from '../utils/storage.js'
+import { ensureStudyRoadmap, parseProgressBackup, readProgressSnapshot, setStorageUser, writeProgressSnapshot } from '../utils/storage.js'
 import { createProgressSync } from '../services/progressSync.js'
 
 const INITIAL_SYNC = { status: 'loading', ready: false, updatedAt: null }
@@ -80,5 +80,11 @@ export function AuthProvider({ children }) {
   }, [userId])
 
   const sync = syncState.userId === userId ? syncState : INITIAL_SYNC
+  const loginAt = session?.user.last_sign_in_at
+  useEffect(() => {
+    if (userId && sync.ready) {
+      try { ensureStudyRoadmap(loginAt) } catch { /* Progress sync still reports storage failures; the date form allows retrying. */ }
+    }
+  }, [userId, loginAt, sync.ready, progressVersion])
   return <AuthContext.Provider value={{ user: session?.user || null, loading, restoreError, configured: authClient.configured, client: authClient, sync, syncNow: () => syncRef.current?.syncNow(), progressVersion }}>{children}</AuthContext.Provider>
 }

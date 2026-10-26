@@ -1,4 +1,6 @@
 // localStorage utility for managing study progress
+import { scheduleReview, srsKey, studyDay, validSrsRecord } from './spacedRepetition.js';
+import { defaultExamDate, validStudyRoadmap } from './studyRoadmap.js';
 
 const STORAGE_KEYS = {
   COMPLETED_QUESTIONS: 'n3vjit_completedQuestions',
@@ -10,6 +12,8 @@ const STORAGE_KEYS = {
   QUIZ_HISTORY: 'n3vjit_quizHistory',
   DOKKAI_PROGRESS: 'n3vjit_dokkaiProgress',
   LAST_LESSON: 'n3vjit_lastLesson',
+  SPACED_REPETITION: 'n3vjit_spacedRepetition',
+  STUDY_ROADMAP: 'n3vjit_studyRoadmap',
 };
 
 let storageUserId = null;
@@ -214,6 +218,42 @@ export const saveLastLesson = (sectionId, questionId) => {
   setItem(STORAGE_KEYS.LAST_LESSON, { sectionId, questionId });
 };
 
+export const getSpacedRepetition = () => getItem(STORAGE_KEYS.SPACED_REPETITION, {});
+
+export const getStudyRoadmap = () => getItem(STORAGE_KEYS.STUDY_ROADMAP, null);
+
+export const ensureStudyRoadmap = (loginAt, now = Date.now()) => {
+  if (!storageUserId || getStudyRoadmap()) return;
+  const today = studyDay(now);
+  const login = Date.parse(loginAt);
+  const startDate = Number.isFinite(login) && login <= now ? studyDay(login) : today;
+  const plan = { startDate, examDate: defaultExamDate(today), customExam: false, updatedAt: new Date(now).toISOString() };
+  if (!setItem(STORAGE_KEYS.STUDY_ROADMAP, plan)) throw new Error('Chưa lưu được lộ trình học.');
+};
+
+export const saveStudyExamDate = (examDate, now = Date.now()) => {
+  if (!storageUserId) throw new Error('Đăng nhập để lưu ngày thi.');
+  const previous = getStudyRoadmap();
+  const plan = { startDate: previous?.startDate || studyDay(now), examDate, customExam: true, updatedAt: new Date(now).toISOString() };
+  if (!validStudyRoadmap(plan) || examDate <= studyDay(now)) throw new Error('Chọn ngày thi từ ngày mai trở đi.');
+  if (!setItem(STORAGE_KEYS.STUDY_ROADMAP, plan)) throw new Error('Chưa lưu được ngày thi.');
+  return plan;
+};
+
+export const recordSpacedAnswer = (question, correct, options) => {
+  if (!storageUserId) return null;
+  const records = getSpacedRepetition();
+  const key = srsKey(question);
+  const previous = records[key];
+  const isNew = !(getCompletedQuestions()[question.section] || []).includes(question.id);
+  const next = scheduleReview(previous, correct, { ...options, isNew, studyPlan: getStudyRoadmap(), questionKey: key });
+  if (next !== previous) {
+    const updated = Object.assign(Object.create(null), records, { [key]: next });
+    if (!setItem(STORAGE_KEYS.SPACED_REPETITION, updated)) throw new Error('Chưa lưu được lịch ôn. Hãy kiểm tra dung lượng lưu trữ rồi thử lại.');
+  }
+  return next;
+};
+
 // ===== Dokkai Progress =====
 
 export const getDokkaiProgress = () => {
@@ -266,6 +306,8 @@ const isMockAttempt = item => {
 };
 
 const validators = {
+  [STORAGE_KEYS.SPACED_REPETITION]: value => isRecord(value) && Object.values(value).every(validSrsRecord),
+  [STORAGE_KEYS.STUDY_ROADMAP]: validStudyRoadmap,
   [STORAGE_KEYS.COMPLETED_QUESTIONS]: value => isRecord(value) && Object.values(value).every(isStringArray),
   [STORAGE_KEYS.WRONG_QUESTIONS]: value => isRecord(value) && Object.values(value).every(section =>
     isRecord(section) && Object.values(section).every(item => isRecord(item) && isCount(item.count) && isCount(item.correctStreak))),
@@ -330,7 +372,7 @@ export const importProgress = (file) => {
 
 export const resetAllProgress = () => {
   if (!storageUserId) return;
-  Object.values(STORAGE_KEYS).forEach(key => {
+  Object.values(STORAGE_KEYS).filter(key => key !== STORAGE_KEYS.STUDY_ROADMAP).forEach(key => {
     localStorage.removeItem(scopedKey(key));
   });
   notifyProgressWrite();

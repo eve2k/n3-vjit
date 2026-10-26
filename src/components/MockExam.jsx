@@ -16,7 +16,8 @@ export default function MockExam() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const [initial] = useState(() => {
-    const saved = getQuizHistory().find((attempt) => attempt.mode === 'mock-exam' && attempt.id === searchParams.get('attempt'))
+    const history = getQuizHistory()
+    const saved = searchParams.get('review') === 'latest' ? [...history].reverse().find(attempt => attempt.mode === 'mock-exam') : history.find(attempt => attempt.mode === 'mock-exam' && attempt.id === searchParams.get('attempt'))
     const restored = saved && restoreMockExam(saved.exam)
     return restored ? { exam: restored, saved } : { exam: createMockExam(), saved: null }
   })
@@ -33,7 +34,7 @@ export default function MockExam() {
   const [scoreInputs, setScoreInputs] = useState(initial.saved?.manualScores || {})
   const [startedAt, setStartedAt] = useState(Date.now)
   const [elapsed, setElapsed] = useState(initial.saved?.elapsed || 0)
-  const [notice, setNotice] = useState(searchParams.has('attempt') && !initial.saved ? { text: 'Không tìm thấy đề đã lưu hoặc ngân hàng câu hỏi đã thay đổi. Bạn có thể bắt đầu một đề mới.', error: true } : null)
+  const [notice, setNotice] = useState((searchParams.has('attempt') || searchParams.get('review') === 'latest') && !initial.saved ? { text: 'Không tìm thấy đề đã lưu hoặc ngân hàng câu hỏi đã thay đổi. Bạn có thể bắt đầu một đề mới.', error: true } : null)
   const [audio, setAudio] = useState({ file: null, url: '' })
   const { file: audioFile, url: audioUrl } = audio
   const audioUrlRef = useRef('')

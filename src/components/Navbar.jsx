@@ -1,11 +1,12 @@
 import { NavLink } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { BookOpen, CalendarDays, CheckCheck, ClipboardList, GraduationCap, Headphones, Layers, LayoutDashboard, LogIn, MessageCircle, PenLine, Sun, Moon, UserRound } from 'lucide-react'
-import { setTheme as persistTheme } from '../utils/storage.js'
+import { getStudyRoadmap, setTheme as persistTheme } from '../utils/storage.js'
+import { studyDay } from '../utils/spacedRepetition.js'
+import { daysBetween, DEFAULT_EXAM_DATE, formatStudyDay } from '../utils/studyRoadmap.js'
 import { useAuth } from '../context/authContext.js'
 import SyncStatus from './SyncStatus.jsx'
 
-const EXAM = new Date('2026-11-21T08:00:00+07:00')
 const links = [
   { to: '/', label: 'Tổng quan', icon: LayoutDashboard },
   { to: '/quiz', label: 'Luyện câu hỏi', icon: ClipboardList },
@@ -19,16 +20,17 @@ const links = [
   { to: '/mistakes', label: 'Câu sai', icon: CheckCheck },
 ]
 
-function countdown() {
-  const days = Math.ceil((EXAM.getTime() - Date.now()) / 86400000)
-  return days > 0 ? `Còn ${days} ngày · Thi 21/11` : 'Tiếp tục hành trình N3'
+function countdown(now, examDate) {
+  const days = daysBetween(studyDay(now), examDate)
+  return days > 0 ? `Còn ${days} ngày · Thi ${formatStudyDay(examDate)}` : days === 0 ? 'Hôm nay là ngày thi' : 'Tiếp tục hành trình N3'
 }
 
 export default function Navbar({ theme, onTheme }) {
   const { user, loading } = useAuth()
-  const [clock, setClock] = useState(countdown)
+  const [now, setNow] = useState(Date.now)
+  const clock = countdown(now, getStudyRoadmap()?.examDate || DEFAULT_EXAM_DATE)
   useEffect(() => {
-    const id = setInterval(() => setClock(countdown()), 60000)
+    const id = setInterval(() => setNow(Date.now()), 60000)
     return () => clearInterval(id)
   }, [])
 

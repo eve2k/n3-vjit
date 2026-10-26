@@ -1,4 +1,6 @@
 import { mergeProgress } from './mergeProgress.js'
+import { newerSrsRecord } from './spacedRepetition.js'
+import { mergeStudyRoadmaps } from './studyRoadmap.js'
 
 const record = value => value !== null && typeof value === 'object' && !Array.isArray(value)
 export function sameProgress(left, right) {
@@ -21,6 +23,8 @@ export function reconcileProgress(base, local, remote) {
     if (sameProgress(here, before)) return there
     if (sameProgress(there, before) || sameProgress(here, there)) return here
     if (path === 'n3vjit_lastLesson') return here
+    if (path === 'n3vjit_studyRoadmap') return !here || !there ? here : mergeStudyRoadmaps(here, there)
+    if (path.startsWith('n3vjit_spacedRepetition.')) return !here || !there ? here : newerSrsRecord(here, there)
     if (path.startsWith('n3vjit_customSakubun.')) {
       if (!here || !there) return here
       return Date.parse(there.updatedAt) > Date.parse(here.updatedAt) ? there : here

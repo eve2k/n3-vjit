@@ -1,10 +1,12 @@
 import { Link } from 'react-router-dom'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ArrowRight, BookOpen, CheckCircle2, ClipboardList, Download, Headphones, History, Layers, MessageCircle, PenLine, RotateCcw, ShieldCheck, Sparkles, Target, Trophy, Upload } from 'lucide-react'
-import { quizSections, QUIZ_TOTAL, dokkai, kaiwaSakubun, flashcardDecks } from '../data/index.js'
-import { exportProgress, getCompletedQuestions, getCustomSakubun, getDokkaiProgress, getLastLesson, getMasteredFlashcards, getQuizHistory, getWrongQuestions, importProgress, resetAllProgress } from '../utils/storage.js'
-import { formatDuration, getContinueLesson, getMistakeQuestions, getQuizProgress, getSectionProgress } from '../utils/learning.js'
+import { allQuizQuestions, quizSections, QUIZ_TOTAL, dokkai, kaiwaSakubun, flashcardDecks } from '../data/index.js'
+import { exportProgress, getCompletedQuestions, getCustomSakubun, getDokkaiProgress, getSpacedRepetition, getStudyRoadmap, getMasteredFlashcards, getQuizHistory, getWrongQuestions, importProgress, resetAllProgress } from '../utils/storage.js'
+import { formatDuration, getMistakeQuestions, getQuizProgress, getSectionProgress } from '../utils/learning.js'
 import { useAuth } from '../context/authContext.js'
+import { buildStudyPlan, formatReviewDate } from '../utils/spacedRepetition.js'
+import StudyRoadmap from './StudyRoadmap.jsx'
 
 const sectionNames = { fukushuu1: 'Câu đồng nghĩa', renshuu2: 'Từ vựng & kết hợp từ', renshuu3: 'Kanji', renshuu4: 'Ngữ pháp', renshuu5: 'Chia thể' }
 const skills = [
@@ -31,9 +33,14 @@ export default function Dashboard() {
   const mastered = new Set(getMasteredFlashcards())
   const masteredCount = cards.filter((card) => mastered.has(card.id)).length
   const history = [...getQuizHistory()].reverse().slice(0, 5)
-  const next = getContinueLesson(completed, getLastLesson())
+  const [now, setNow] = useState(Date.now)
+  const records = getSpacedRepetition()
+  const roadmap = getStudyRoadmap()
+  const studyPlan = buildStudyPlan(allQuizQuestions, records, completed, { now, studyPlan: roadmap })
+  useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 30000); return () => clearInterval(timer) }, [])
   const percentage = Math.round(done / QUIZ_TOTAL * 100)
-  const continueTo = next ? `/quiz?section=${next.section.id}&question=${next.question.id}` : '/quiz'
+  const todayTask = studyPlan.roadmap?.todayEvent
+  const continueTo = todayTask ? todayTask.kind === 'mock' ? '/exam' : '/exam?review=latest' : '/quiz'
 
   const restore = async (event) => {
     if (!user) return
@@ -61,21 +68,22 @@ export default function Dashboard() {
       </div>
       <section className="study-hero" aria-labelledby="continue-heading">
         <div className="hero-copy">
-          <span className="hero-kicker"><Sparkles size={15} aria-hidden="true" />{done === QUIZ_TOTAL ? 'Bạn đã đi được một chặng đường dài' : done ? 'Giữ nhịp học của bạn' : 'Bắt đầu hành trình ôn tập'}</span>
-          <h2 id="continue-heading">{done === QUIZ_TOTAL ? 'Hoàn thành ngân hàng câu hỏi!' : done ? 'Sẵn sàng cho bài học tiếp theo?' : 'Từng câu hỏi nhỏ. Một bước tiến lớn.'}</h2>
-          <p>{next ? `${next.section.label} · ${sectionNames[next.section.id]} — tiếp tục từ câu ${next.question.questionNumber}.` : 'Ôn lại kiến thức, luyện câu sai hoặc thử sức với một đề thi.'}</p>
+          <span className="hero-kicker"><Sparkles size={15} aria-hidden="true" />LỊCH ÔN TỪNG NGÀY</span>
+          <h2 id="continue-heading">{todayTask ? todayTask.kind === 'mock' ? 'Hôm nay dành cho thi thử' : 'Chữa đề, củng cố phần còn yếu' : studyPlan.dueCount ? 'Đến giờ củng cố kiến thức' : studyPlan.newCount ? 'Thêm một ít kiến thức mới' : 'Bạn đã xong lịch ôn hiện tại'}</h2>
+          <p>{todayTask ? 'Lịch hôm nay không giao câu mới. Dành thời gian làm đề, xem lại đáp án và các câu sai.' : studyPlan.questions.length ? `${studyPlan.dueCount} câu đến hạn · Phiên tới: ${studyPlan.reviewCount} câu ôn + ${studyPlan.newCount} câu mới. Học từng phiên ngắn, giãn lịch khi nhớ đúng.` : studyPlan.nextDueAt ? `Lần ôn tiếp: ${formatReviewDate(studyPlan.nextDueAt)} (giờ Việt Nam). Nghỉ một chút rồi quay lại nhé.` : 'Bạn đã đủ câu mới hôm nay. Quay lại ngày mai để học tiếp.'}</p>
           <div className="flex flex-wrap gap-3">
-            <Link to={continueTo} className="btn hero-primary">{done ? 'Tiếp tục ôn tập' : 'Bắt đầu học'}<ArrowRight size={17} aria-hidden="true" /></Link>
+            <Link to={continueTo} className="btn hero-primary">{todayTask ? todayTask.kind === 'mock' ? 'Bắt đầu thi thử' : 'Chữa đề gần nhất' : studyPlan.questions.length ? 'Mở phiên học hôm nay' : 'Xem lịch ôn'}<ArrowRight size={17} aria-hidden="true" /></Link>
             <Link to="/exam" className="btn hero-secondary"><ClipboardList size={17} aria-hidden="true" />Thi thử tổng hợp</Link>
           </div>
         </div>
         <div className="hero-progress">
-          <div className="progress-ring" style={{ '--progress': `${percentage}%` }} role="img" aria-label={`Hoàn thành ${percentage}% ngân hàng câu hỏi`}>
-            <div><strong>{percentage}<small>%</small></strong><span>đã hoàn thành</span></div>
+          <div className="progress-ring" style={{ '--progress': `${percentage}%` }} role="img" aria-label={`Đã làm qua ${percentage}% ngân hàng câu hỏi`}>
+            <div><strong>{percentage}<small>%</small></strong><span>đã làm qua</span></div>
           </div>
           <p>{done} / {QUIZ_TOTAL} câu hỏi</p>
         </div>
       </section>
+      <StudyRoadmap stats={studyPlan} now={now} compact />
       <div className="stat-grid">
         <Stat icon={Target} label="Câu hỏi đã làm" value={done} detail={`/ ${QUIZ_TOTAL} câu`} to="/quiz" />
         <Stat icon={BookOpen} label="Bài đọc hoàn thành" value={readingDone} detail={`/ ${dokkai.length} bài`} to="/dokkai" />
@@ -89,11 +97,11 @@ export default function Dashboard() {
             {quizSections.map((section, index) => {
               const count = getSectionProgress(section, completed)
               const total = section.questions.length
-              const question = section.questions.find((item) => !(completed[section.id] || []).includes(item.id)) || section.questions[0]
+              const sectionPlan = buildStudyPlan(allQuizQuestions, records, completed, { now, sectionId: section.id, studyPlan: roadmap })
               return (
-                <Link key={section.id} to={`/quiz?section=${section.id}&question=${question.id}`} className="lesson-row">
+                <Link key={section.id} to={`/quiz?section=${section.id}`} className="lesson-row">
                   <span className={`lesson-number ${count === total ? 'is-complete' : ''}`}>{count === total ? <CheckCircle2 size={20} aria-hidden="true" /> : `0${index + 1}`}</span>
-                  <div className="min-w-0 flex-1"><div className="lesson-title"><h3>{sectionNames[section.id]}</h3><span className="jp">{section.label}</span></div><div className="progress-track"><span style={{ width: `${count / total * 100}%` }} /></div><p>{count}/{total} câu đã làm</p></div>
+                  <div className="min-w-0 flex-1"><div className="lesson-title"><h3>{sectionNames[section.id]}</h3><span className="jp">{section.label}</span></div><div className="progress-track"><span style={{ width: `${count / total * 100}%` }} /></div><p>{count}/{total} câu đã làm · {sectionPlan.dueCount} đến hạn · {sectionPlan.newCount} mới trong phiên tới</p></div>
                   <ArrowRight size={18} className="lesson-arrow" aria-hidden="true" />
                 </Link>
               )

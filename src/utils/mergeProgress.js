@@ -1,7 +1,14 @@
+import { newerSrsRecord } from './spacedRepetition.js';
+import { mergeStudyRoadmaps } from './studyRoadmap.js';
 const union = (left = [], right = []) => [...new Set([...left, ...right])];
 
 export function mergeProgress(account, guest) {
   const merged = { ...guest, ...account };
+  if (account.n3vjit_studyRoadmap || guest.n3vjit_studyRoadmap) merged.n3vjit_studyRoadmap = mergeStudyRoadmaps(account.n3vjit_studyRoadmap, guest.n3vjit_studyRoadmap);
+  if (account.n3vjit_spacedRepetition || guest.n3vjit_spacedRepetition) {
+    merged.n3vjit_spacedRepetition = Object.assign(Object.create(null), guest.n3vjit_spacedRepetition);
+    for (const [key, item] of Object.entries(account.n3vjit_spacedRepetition || {})) merged.n3vjit_spacedRepetition[key] = newerSrsRecord(merged.n3vjit_spacedRepetition[key], item);
+  }
   const completedKey = 'n3vjit_completedQuestions';
   merged[completedKey] = Object.assign(Object.create(null), guest[completedKey], account[completedKey]);
   for (const section of Object.keys(guest[completedKey] || {})) merged[completedKey][section] = union(account[completedKey]?.[section], guest[completedKey][section]);
