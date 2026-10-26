@@ -11,6 +11,7 @@ import StudyRoadmap from './StudyRoadmap.jsx'
 import { useAuth } from '../context/authContext.js'
 import useQuestionShortcuts from '../hooks/useQuestionShortcuts.js'
 import { createId } from '../utils/id.js'
+import { grammarGuide } from '../data/grammarGuide.js'
 
 const quizKeys = new Set(allQuizQuestions.map(srsKey))
 function prepareSession(mode, sectionId, now) {
@@ -47,6 +48,11 @@ export default function QuizEngine({ mistakeMode = false }) {
   const isCorrect = q && String(currentPick) === String(q.correctAnswer)
   const currentQuestionId = q?.id
   const currentSectionId = q?.section
+  const relatedGrammar = q?.section === 'renshuu4'
+    ? grammarGuide.filter(item => item.group === 'grammar' && item.refs?.includes(q.questionNumber))
+    : q?.section === 'renshuu5'
+      ? grammarGuide.filter(item => item.group === 'forms' && (item.refs?.includes(q.questionNumber) || item.formRefs?.includes(q.questionNumber)))
+      : []
 
   useEffect(() => {
     if (started) return undefined
@@ -132,7 +138,7 @@ export default function QuizEngine({ mistakeMode = false }) {
                 })}
               </div>
               <p className="keyboard-hint" aria-live="polite">{pendingChoice ? `Đang chọn ${pendingChoice} · Nhấn Space để trả lời` : currentPick ? 'Space để sang câu tiếp' : '1 / 2 / 3 / 4 chọn A / B / C / D · Space để trả lời'}</p>
-              {currentPick && <div className={`answer-feedback ${isCorrect ? 'feedback-correct' : 'feedback-wrong'}`} role="status"><strong>{isCorrect ? 'Chính xác!' : `Chưa đúng. Đáp án là ${q.correctAnswer}.`}</strong>{q.keyTakeaway && <p className="font-semibold">{q.keyTakeaway}</p>}{q.explanation && <p>{q.explanation}</p>}{outcomes[q.id] && <p className="review-schedule">{outcomes[q.id].lastReviewId === `${sessionId}/${q.id}` ? 'Lần ôn tiếp theo: ' : 'Lịch ôn giữ nguyên: '}{formatReviewDate(outcomes[q.id].dueAt)} (giờ Việt Nam)</p>}</div>}
+              {currentPick && <div className={`answer-feedback ${isCorrect ? 'feedback-correct' : 'feedback-wrong'}`} role="status"><strong>{isCorrect ? 'Chính xác!' : `Chưa đúng. Đáp án là ${q.correctAnswer}.`}</strong>{q.keyTakeaway && <p className="font-semibold">{q.keyTakeaway}</p>}{q.translation && <p><strong>Nghĩa:</strong> {q.translation}</p>}{q.explanation && <p><strong>Giải thích:</strong> {q.explanation}</p>}{relatedGrammar.length > 0 && <p className="related-grammar"><strong>Mẫu ngữ pháp liên quan:</strong> {relatedGrammar.map((item, itemIndex) => <span key={item.id}>{itemIndex > 0 ? ' · ' : ''}<Link to={`/grammar?focus=${encodeURIComponent(item.id)}`}>{item.title}</Link></span>)}</p>}{outcomes[q.id] && <p className="review-schedule">{outcomes[q.id].lastReviewId === `${sessionId}/${q.id}` ? 'Lần ôn tiếp theo: ' : 'Lịch ôn giữ nguyên: '}{formatReviewDate(outcomes[q.id].dueAt)} (giờ Việt Nam)</p>}</div>}
             </section>
             <div className="quiz-navigation"><button type="button" className="btn btn-secondary" disabled={index === 0} onClick={() => setIndex((value) => value - 1)}><ArrowLeft size={16} aria-hidden="true" />Câu trước</button><span>{index + 1} / {questions.length}</span><button type="button" className="btn btn-primary" disabled={index === questions.length - 1} onClick={() => setIndex((value) => value + 1)}>Câu tiếp<ArrowRight size={16} aria-hidden="true" /></button></div>
             {score.answered === questions.length && <section className="notice notice-success mt-5"><strong>Đã hoàn thành phiên học: {score.correct}/{score.total} câu đúng.</strong><p>{user ? 'Đã cập nhật lịch từng câu. Bạn có thể nghỉ và quay lại khi đến hạn.' : 'Kết quả học thử không được lưu.'}</p><div className="mt-3 flex flex-wrap gap-2"><button type="button" className="btn btn-secondary" onClick={() => resetSession(mode, sectionId, Date.now())}>Xem lịch ôn tiếp</button><Link to="/" className="btn btn-secondary">Về tổng quan</Link></div></section>}

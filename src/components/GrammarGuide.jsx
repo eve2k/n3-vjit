@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { BookOpen, Search } from 'lucide-react'
 import { grammarGuide } from '../data/grammarGuide.js'
 import SpeakButton from './SpeakButton.jsx'
@@ -10,7 +10,10 @@ const tabs = [
 ]
 
 export default function GrammarGuide() {
-  const [tab, setTab] = useState('grammar')
+  const [searchParams] = useSearchParams()
+  const focusId = searchParams.get('focus')
+  const focusItem = grammarGuide.find(item => item.id === focusId)
+  const [tab, setTab] = useState(() => focusItem?.group || 'grammar')
   const [category, setCategory] = useState('all')
   const [search, setSearch] = useState('')
 
@@ -25,6 +28,11 @@ export default function GrammarGuide() {
         .some((value) => value?.toLocaleLowerCase().includes(term))
     })
   }, [inTab, category, search])
+
+  useEffect(() => {
+    if (!focusId) return
+    document.getElementById(`grammar-${focusId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [focusId, visible])
 
   return (
     <main className="mx-auto max-w-6xl p-4 pb-24">
@@ -79,7 +87,7 @@ export default function GrammarGuide() {
         <p className="rounded-lg border border-[var(--line)] bg-[var(--card)] p-5">Không tìm thấy mẫu phù hợp.</p>
       ) : (
         <div className="grid items-start gap-3 lg:grid-cols-2">
-          {visible.map((item) => <GuideCard key={item.id} item={item} />)}
+          {visible.map((item) => <GuideCard key={item.id} item={item} focused={item.id === focusId} />)}
         </div>
       )}
     </main>
@@ -99,9 +107,9 @@ function FilterButton({ active, onClick, children }) {
   )
 }
 
-function GuideCard({ item }) {
+function GuideCard({ item, focused }) {
   return (
-    <article className="rounded-lg border border-[var(--line)] bg-[var(--card)] p-4 shadow-sm">
+    <article id={`grammar-${item.id}`} className={`rounded-lg border border-[var(--line)] bg-[var(--card)] p-4 shadow-sm ${focused ? 'grammar-focused' : ''}`}>
       <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">{item.category} · {item.source || (item.group === 'grammar' ? '練習4' : '練習5')}</p>
       <h2 className="jp text-xl font-semibold">{item.title}</h2>
       <dl className="mt-3 space-y-2 text-sm">

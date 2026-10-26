@@ -41,6 +41,12 @@ export default function Dashboard() {
   const percentage = Math.round(done / QUIZ_TOTAL * 100)
   const todayTask = studyPlan.roadmap?.todayEvent
   const continueTo = todayTask ? todayTask.kind === 'mock' ? '/exam' : '/exam?review=latest' : '/quiz'
+  const statItems = [
+    done > 0 && { icon: Target, label: 'Câu hỏi đã làm', value: done, detail: `/ ${QUIZ_TOTAL} câu`, to: '/quiz' },
+    readingDone > 0 && { icon: BookOpen, label: 'Bài đọc hoàn thành', value: readingDone, detail: `/ ${dokkai.length} bài`, to: '/dokkai' },
+    masteredCount > 0 && { icon: Layers, label: 'Flashcard đã thuộc', value: masteredCount, detail: `/ ${cards.length} thẻ`, to: '/flashcards' },
+    wrong > 0 && { icon: RotateCcw, label: 'Câu cần ôn lại', value: wrong, detail: 'Luyện lại để ghi nhớ', to: '/mistakes', warning: true },
+  ].filter(Boolean)
 
   const restore = async (event) => {
     if (!user) return
@@ -84,12 +90,7 @@ export default function Dashboard() {
         </div>
       </section>
       <StudyRoadmap stats={studyPlan} now={now} compact />
-      <div className="stat-grid">
-        <Stat icon={Target} label="Câu hỏi đã làm" value={done} detail={`/ ${QUIZ_TOTAL} câu`} to="/quiz" />
-        <Stat icon={BookOpen} label="Bài đọc hoàn thành" value={readingDone} detail={`/ ${dokkai.length} bài`} to="/dokkai" />
-        <Stat icon={Layers} label="Flashcard đã thuộc" value={masteredCount} detail={`/ ${cards.length} thẻ`} to="/flashcards" />
-        <Stat icon={RotateCcw} label="Câu cần ôn lại" value={wrong} detail={wrong ? 'Luyện lại để ghi nhớ' : 'Sổ tay câu sai đang trống'} to="/mistakes" warning={wrong > 0} />
-      </div>
+      {statItems.length > 0 ? <div className="stat-grid">{statItems.map(item => <Stat key={item.label} {...item} />)}</div> : <section className="panel dashboard-start-tip"><span className="feature-icon"><BookOpen size={21} aria-hidden="true" /></span><div><h2>Bắt đầu từ đây</h2><p>Học phiên câu hỏi hôm nay, rồi mở một bộ flashcard để làm quen từ vựng.</p></div><Link to="/quiz" className="btn btn-primary">Bắt đầu học<ArrowRight size={16} aria-hidden="true" /></Link></section>}
       <div className="dashboard-columns">
         <section aria-labelledby="sections-heading">
           <div className="section-heading"><h2 id="sections-heading">Ôn tập theo chuyên đề</h2><Link to="/grammar" className="text-link">Tra cứu ngữ pháp<ArrowRight size={14} aria-hidden="true" /></Link></div>
