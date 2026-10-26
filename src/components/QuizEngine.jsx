@@ -12,6 +12,7 @@ import { useAuth } from '../context/authContext.js'
 import useQuestionShortcuts from '../hooks/useQuestionShortcuts.js'
 import { createId } from '../utils/id.js'
 import { grammarGuide } from '../data/grammarGuide.js'
+import PomodoroTimer from './PomodoroTimer.jsx'
 
 const quizKeys = new Set(allQuizQuestions.map(srsKey))
 function prepareSession(mode, sectionId, now) {
@@ -25,13 +26,13 @@ function prepareSession(mode, sectionId, now) {
   return { questions: due.slice(0, SRS_SESSION_LIMIT), reviewCount: Math.min(due.length, SRS_SESSION_LIMIT), newCount: 0, dueCount: due.length, unseenCount: 0, newToday: 0, newAllowance: 0, dailyLimit: 0, nextDueAt: future.length ? new Date(Math.min(...future)).toISOString() : null }
 }
 
-export default function QuizEngine({ mistakeMode = false }) {
+export default function QuizEngine({ mistakeMode = false, focusMode = false }) {
   const { user } = useAuth()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const initialSection = quizSections.some(section => section.id === searchParams.get('section')) ? searchParams.get('section') : 'all'
   const [sectionId, setSectionId] = useState(initialSection)
-  const [mode, setMode] = useState(mistakeMode || searchParams.get('mode') === 'mistakes' ? 'mistakes' : 'study')
+  const [mode, setMode] = useState(focusMode ? 'study' : mistakeMode || searchParams.get('mode') === 'mistakes' ? 'mistakes' : 'study')
   const [now, setNow] = useState(Date.now)
   const [started, setStarted] = useState(false)
   const [questions, setQuestions] = useState([])
@@ -98,14 +99,15 @@ export default function QuizEngine({ mistakeMode = false }) {
     onAnswer: select, onNext: () => setIndex(value => Math.min(questions.length - 1, value + 1)),
   })
 
-  return <div className="page-shell quiz-page">
-    <div className="page-heading"><div><p className="eyebrow">{mode === 'mistakes' ? 'BIẾN CÂU SAI THÀNH KIẾN THỨC' : 'HỌC ÍT MỖI LẦN, ÔN ĐÚNG LỊCH'}</p><h1>{mode === 'mistakes' ? 'Sổ tay câu sai' : 'Ôn tập giãn cách'}</h1><p className="page-description">{mode === 'mistakes' ? 'Mỗi phiên tối đa 20 câu. Câu trắc nghiệm đã có lịch chỉ xuất hiện khi đến hạn; trả lời đúng trong 2 lượt ôn để bỏ khỏi sổ tay.' : 'Ưu tiên câu đến hạn, thêm ít câu mới và tăng dần khoảng cách khi bạn nhớ đúng.'}</p></div><Link to="/" className="text-link"><ArrowLeft size={15} aria-hidden="true" />Tổng quan</Link></div>
-    <div className="panel quiz-toolbar">
+  return <div className={`page-shell quiz-page ${focusMode ? 'focus-study-page' : ''}`}>
+    <div className="page-heading"><div><p className="eyebrow">{focusMode ? 'KHÔNG GIAN HỌC TẬP' : mode === 'mistakes' ? 'BIẾN CÂU SAI THÀNH KIẾN THỨC' : 'HỌC ÍT MỖI LẦN, ÔN ĐÚNG LỊCH'}</p><h1>{focusMode ? 'Học tập tập trung' : mode === 'mistakes' ? 'Sổ tay câu sai' : 'Ôn tập giãn cách'}</h1><p className="page-description">{focusMode ? 'Một phiên ngắn theo lịch hôm nay, không có thanh điều hướng làm bạn phân tâm.' : mode === 'mistakes' ? 'Mỗi phiên tối đa 20 câu. Câu trắc nghiệm đã có lịch chỉ xuất hiện khi đến hạn; trả lời đúng trong 2 lượt ôn để bỏ khỏi sổ tay.' : 'Ưu tiên câu đến hạn, thêm ít câu mới và tăng dần khoảng cách khi bạn nhớ đúng.'}</p></div><Link to="/" className="text-link"><ArrowLeft size={15} aria-hidden="true" />{focusMode ? 'Thoát phiên tập trung' : 'Tổng quan'}</Link></div>
+    {focusMode && <PomodoroTimer />}
+    {!focusMode && <div className="panel quiz-toolbar">
       {!mistakeMode && <><label><span>Chế độ học</span><select value={mode} onChange={event => resetSession(event.target.value, sectionId, Date.now())}><option value="study">Ôn tập giãn cách</option><option value="mistakes">Ôn câu sai đến hạn</option><option value="exam">Thi thử tổng hợp</option></select></label><label className="quiz-section-select"><span>Chuyên đề</span><select value={sectionId} disabled={mode !== 'study'} onChange={event => resetSession(mode, event.target.value, Date.now())}><option value="all">Tất cả chuyên đề · chia nhỏ theo phiên</option>{quizSections.map(section => <option key={section.id} value={section.id}>{section.title}</option>)}</select></label></>}
       <span className="text-sm text-[var(--muted)]">Tối đa {SRS_SESSION_LIMIT} câu / phiên</span>
-    </div>
+    </div>}
     {notice && <p className="notice notice-error mb-5" role="alert">{notice}</p>}
-    {!started && mode === 'study' && <StudyRoadmap stats={plan} now={now} onChange={() => setNow(Date.now())} />}
+    {!focusMode && !started && mode === 'study' && <StudyRoadmap stats={plan} now={now} onChange={() => setNow(Date.now())} />}
     {!started ? <section className="panel srs-plan">
       <span className="feature-icon"><CalendarClock size={25} aria-hidden="true" /></span>
       <h2>{plan.roadmap?.todayEvent ? 'Dành thời gian cho thi thử và chữa đề' : plan.questions.length ? 'Phiên học vừa sức cho hôm nay' : 'Bạn có thể nghỉ ở đây'}</h2>
@@ -117,7 +119,7 @@ export default function QuizEngine({ mistakeMode = false }) {
       <div className="flex flex-wrap gap-3 mt-5"><button type="button" className="btn btn-primary" disabled={!plan.questions.length} onClick={() => startSession(Date.now())}>Bắt đầu {plan.questions.length} câu<ArrowRight size={16} aria-hidden="true" /></button><Link to="/" className="btn btn-secondary">Về tổng quan</Link></div>
       <details className="srs-explanation"><summary>Lịch ôn thay đổi thế nào?</summary><p>Đúng khi đến hạn: ôn sau 1 → 3 → 7 → 14 → 30 → 60 ngày. Sai: trở về bước học lại và hẹn sau 10 phút. Trả lời đúng trước hạn không tăng bậc. Số câu mới mỗi ngày tự chia theo ngày bắt đầu và ngày thi; ngày học tính theo giờ Việt Nam. Các câu cũ được hẹn ôn trong giai đoạn củng cố và trước ngày thi.</p><p>Câu từng làm ở phiên bản cũ được đưa vào ôn lại, chưa được coi là đã nhớ lâu. Phần này áp dụng cho ngân hàng luyện câu hỏi; thi thử và flashcard giữ cách hoạt động riêng.</p></details>
     </section> : <>
-        <div className="quiz-layout">
+        <div className={`quiz-layout ${focusMode ? 'focus-quiz-layout' : ''}`}>
           <div>
             <section className="panel question-card" aria-labelledby="question-heading">
               <div className="question-meta"><span>{q.contextTitle || quizSections.find((section) => section.id === q.section)?.label || q.section} · Câu {index + 1}/{questions.length}</span><SpeakButton text={q.questionText} /></div>
@@ -144,7 +146,7 @@ export default function QuizEngine({ mistakeMode = false }) {
             {score.answered === questions.length && <section className="notice notice-success mt-5"><strong>Đã hoàn thành phiên học: {score.correct}/{score.total} câu đúng.</strong><p>{user ? 'Đã cập nhật lịch từng câu. Bạn có thể nghỉ và quay lại khi đến hạn.' : 'Kết quả học thử không được lưu.'}</p><div className="mt-3 flex flex-wrap gap-2"><button type="button" className="btn btn-secondary" onClick={() => resetSession(mode, sectionId, Date.now())}>Xem lịch ôn tiếp</button><Link to="/" className="btn btn-secondary">Về tổng quan</Link></div></section>}
           </div>
 
-          <aside className="panel question-map" aria-label="Danh sách câu hỏi">
+          {!focusMode && <aside className="panel question-map" aria-label="Danh sách câu hỏi">
             <h2>Tiến độ lượt học</h2><p><strong>{score.answered}</strong>/{questions.length} câu đã trả lời</p>
             <div className="progress-track"><span style={{ width: `${score.answered / questions.length * 100}%` }} /></div>
             <div className="question-grid">{questions.map((question, number) => {
@@ -155,7 +157,7 @@ export default function QuizEngine({ mistakeMode = false }) {
             })}</div>
             <p className="question-map-note">Chọn số để xem lại câu trong phiên này. Câu sai sẽ được hẹn ôn sớm hơn.</p>
             <button type="button" className="btn btn-secondary w-full mt-4" onClick={() => resetSession(mode, sectionId, Date.now())}><RotateCcw size={16} aria-hidden="true" />Chọn phiên khác</button>
-          </aside>
+          </aside>}
         </div>
     </>}
   </div>

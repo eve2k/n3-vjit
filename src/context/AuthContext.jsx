@@ -12,8 +12,27 @@ export function AuthProvider({ children }) {
   const [restoreError, setRestoreError] = useState(false)
   const [syncState, setSyncState] = useState(INITIAL_SYNC)
   const [progressVersion, setProgressVersion] = useState(0)
+  const [adminState, setAdminState] = useState({ userId: null, isAdmin: false, loading: false, error: null })
   const syncRef = useRef(null)
   const userId = session?.user.id
+
+  useEffect(() => {
+    if (!userId) {
+      setAdminState({ userId: null, isAdmin: false, loading: false, error: null })
+      return undefined
+    }
+    let active = true
+    const refresh = () => authClient.checkAdmin().then(isAdmin => {
+      if (active) setAdminState({ userId, isAdmin, loading: false, error: null })
+    }).catch(error => {
+      if (active) setAdminState({ userId, isAdmin: false, loading: false, error })
+    })
+    setAdminState({ userId, isAdmin: false, loading: true, error: null })
+    refresh()
+    const timer = setInterval(refresh, 60000)
+    window.addEventListener('focus', refresh)
+    return () => { active = false; clearInterval(timer); window.removeEventListener('focus', refresh) }
+  }, [userId])
 
   useEffect(() => {
     let active = true
@@ -80,11 +99,12 @@ export function AuthProvider({ children }) {
   }, [userId])
 
   const sync = syncState.userId === userId ? syncState : INITIAL_SYNC
+  const admin = adminState.userId === userId ? adminState : { userId, isAdmin: false, loading: Boolean(userId), error: null }
   const loginAt = session?.user.last_sign_in_at
   useEffect(() => {
     if (userId && sync.ready) {
       try { ensureStudyRoadmap(loginAt) } catch { /* Progress sync still reports storage failures; the date form allows retrying. */ }
     }
   }, [userId, loginAt, sync.ready, progressVersion])
-  return <AuthContext.Provider value={{ user: session?.user || null, loading, restoreError, configured: authClient.configured, client: authClient, sync, syncNow: () => syncRef.current?.syncNow(), progressVersion }}>{children}</AuthContext.Provider>
+  return <AuthContext.Provider value={{ user: session?.user || null, loading, restoreError, configured: authClient.configured, client: authClient, sync, syncNow: () => syncRef.current?.syncNow(), progressVersion, isAdmin: admin.isAdmin, adminLoading: admin.loading, adminError: admin.error }}>{children}</AuthContext.Provider>
 }

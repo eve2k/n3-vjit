@@ -46,6 +46,25 @@ test('login sends the password to the auth endpoint but never persists it', asyn
   assert.equal(JSON.parse(storage.getItem(client.storageKey)).user.id, user.id)
 })
 
+test('admin status and role management calls require the authenticated Supabase session', async () => {
+  const calls = []
+  const rows = [{ user_id: 'user-b', email: 'admin@example.com', is_admin: false }]
+  const { client } = fixture(async (url, options) => {
+    calls.push({ url, options })
+    if (url.endsWith('/auth/v1/token?grant_type=password')) return reply(tokenData())
+    if (url.endsWith('/rpc/n3vjit_is_admin')) return reply(true)
+    if (url.endsWith('/rpc/n3vjit_admin_list_users')) return reply(rows)
+    if (url.endsWith('/rpc/n3vjit_admin_set_role')) return reply(true)
+    return reply({ message: 'unexpected_request' }, 404)
+  })
+  await client.signIn(user.email, 'password')
+  assert.equal(await client.checkAdmin(), true)
+  assert.deepEqual(await client.listAdminUsers(), rows)
+  assert.equal(await client.setAdminRole('learner@example.com', true), true)
+  for (const call of calls.slice(1)) assert.equal(call.options.headers.Authorization, 'Bearer access-test')
+  assert.deepEqual(JSON.parse(calls.at(-1).options.body), { p_email: 'learner@example.com', p_is_admin: true })
+})
+
 test('an unconfirmed registration does not create a signed-in session', async () => {
   const { client, storage } = fixture(async () => reply({ id: user.id, email: user.email }))
   let signedIn = false

@@ -16,12 +16,13 @@ const GrammarGuide = lazy(() => import('./components/GrammarGuide.jsx'))
 const AuthPage = lazy(() => import('./components/AuthPage.jsx'))
 const AuthCallback = lazy(() => import('./components/AuthCallback.jsx'))
 const AccountPage = lazy(() => import('./components/AccountPage.jsx'))
+const AdminDashboard = lazy(() => import('./components/AdminDashboard.jsx'))
 
 export default function App() {
   const location = useLocation()
-  const { user, loading, sync } = useAuth()
+  const { user, loading, sync, isAdmin, adminLoading, adminError } = useAuth()
   const accountKey = user?.id || 'guest'
-  const hideNavbar = ['/login', '/register'].includes(location.pathname)
+  const hideNavbar = ['/login', '/register', '/study'].includes(location.pathname)
   const callbackParams = new URLSearchParams(location.hash.replace(/^#/, ''))
   const callbackQuery = new URLSearchParams(location.search)
   const [theme, setTheme] = useState(getTheme)
@@ -49,7 +50,7 @@ export default function App() {
   return (
     <div className="min-h-svh pb-8">
       {!hideNavbar && <Navbar theme={theme} onTheme={setTheme} />}
-      {!user && !loading && !location.pathname.startsWith('/auth/') && <div className="page-shell guest-notice"><p className="notice">Bạn đang học thử. Tiến độ và kết quả sẽ không được lưu. <a href="/login" className="text-link">Đăng nhập để lưu tiến độ</a></p></div>}
+      {!user && !loading && !location.pathname.startsWith('/auth/') && location.pathname !== '/study' && <div className="page-shell guest-notice"><p className="notice">Bạn đang học thử. Tiến độ và kết quả sẽ không được lưu. <a href="/login" className="text-link">Đăng nhập để lưu tiến độ</a></p></div>}
       <div id="main-content" tabIndex={-1}>
         {loading || (user && !sync.ready && location.pathname !== '/auth/callback') ? <div className="page-shell loading-state" role="status">{loading ? 'Đang khôi phục phiên đăng nhập…' : 'Đang tải tiến độ học tập…'}</div> :
         <Suspense fallback={<div className="page-shell loading-state" role="status">Đang mở bài học…</div>}>
@@ -57,6 +58,8 @@ export default function App() {
           <Routes>
             <Route path="/" element={<Dashboard key={accountKey} />} />
             <Route path="/quiz" element={new URLSearchParams(location.search).get('mode') === 'exam' ? <Navigate to="/exam" replace /> : <QuizEngine key={`${accountKey}:quiz${location.search}`} />} />
+            <Route path="/study" element={<QuizEngine key={`${accountKey}:focus-study`} focusMode />} />
+            <Route path="/admin" element={!user ? <Navigate to="/login" replace /> : adminLoading ? <div className="page-shell loading-state" role="status">Đang kiểm tra quyền quản trị…</div> : isAdmin ? <AdminDashboard /> : user.email?.toLowerCase() === 'nguyeenhuynhlong@gmail.com' ? <section className="page-shell panel admin-setup-notice"><h1>Chưa bật được quyền quản trị</h1><p>Chạy migration <code>supabase/migrations/20261027_admin_roles.sql</code> trong Supabase SQL Editor. Nếu tài khoản chưa tồn tại lúc chạy migration, hãy xác minh đúng tài khoản rồi cấp role bằng câu lệnh một lần:</p><pre>{`insert into n3vjit_private.admin_roles(user_id)\nselect id from auth.users where lower(email) = 'nguyeenhuynhlong@gmail.com'\non conflict (user_id) do nothing;`}</pre><p>{adminError ? 'Nếu vừa chạy migration, tải lại trang sau khi Supabase hoàn tất.' : 'Chỉ project owner nên chạy câu lệnh cấp role sau khi đã xác minh chủ tài khoản.'}</p></section> : <Navigate to="/" replace />} />
             <Route path="/exam" element={<MockExam key={`${accountKey}:exam${location.search}`} />} />
             <Route path="/dokkai" element={<DokkaiView key={accountKey} />} />
             <Route path="/choukai" element={<ChoukaiView key={accountKey} />} />

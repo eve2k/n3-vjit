@@ -2,6 +2,8 @@
 
 Website ôn tập tiếng Nhật N3 bằng React và Vite, gồm 257 câu trắc nghiệm, đọc hiểu, luyện nghe, flashcard, ngữ pháp, hội thoại và viết bài.
 
+Trang `/study` mở phiên ôn hôm nay trong bố cục tập trung, không có thanh điều hướng. Pomodoro mặc định học 25 phút, nghỉ ngắn 5 phút, nghỉ dài 15 phút sau mỗi 4 phiên; thời lượng có thể chỉnh trong trang học. Trang `/admin` quản lý quyền tài khoản sau khi cấu hình migration.
+
 ## Chạy trên máy
 
 Dùng Node.js 22.12 trở lên. Trong thư mục dự án:
@@ -60,9 +62,18 @@ Repository chỉ cần mã nguồn, tài nguyên trong `public/`, cấu hình v�
 3. Trong Authentication → URL Configuration, với website trên VPS hãy đặt Site URL là `http://chungchitiengnhatvjit.duckdns.org:4173` và thêm Redirect URL `http://chungchitiengnhatvjit.duckdns.org:4173/auth/callback`. Khi phát triển cục bộ, thêm riêng `http://localhost:5173/auth/callback` (đổi cổng nếu Vite dùng cổng khác). Địa chỉ callback trong ứng dụng được lấy từ domain đang mở; nếu nó không nằm trong danh sách Redirect URLs, Supabase có thể chuyển về Site URL.
 4. Trong Authentication → Email Templates → Confirm signup, giữ liên kết xác nhận là `{{ .ConfirmationURL }}` để Supabase chuyển tiếp tới callback đã yêu cầu. Nếu email vẫn trỏ về localhost, kiểm tra Site URL, danh sách Redirect URLs và template này; gửi lại email sau khi lưu cấu hình vì liên kết cũ vẫn giữ địa chỉ cũ.
 5. Để bật lưu tiến độ trực tuyến, chạy file `supabase/migrations/20261026_study_progress.sql` một lần bằng Supabase SQL Editor hoặc quy trình migrations của bạn. Migration tạo bảng `public.n3vjit_study_progress`, bật RLS và giới hạn đọc/ghi theo `auth.uid() = user_id`.
-6. Khởi động lại `npm run dev` sau khi thay đổi biến môi trường. Khi triển khai, khai báo hai biến công khai tương ứng trong môi trường build của hosting, rồi build lại.
+6. Để bật dashboard quản trị, chạy `supabase/migrations/20261027_admin_roles.sql` một lần bằng Supabase SQL Editor. Migration cấp quyền cho `nguyeenhuynhlong@gmail.com` nếu tài khoản đã tồn tại. Nếu tài khoản được tạo sau đó, project owner cần xác minh chủ tài khoản rồi chạy câu lệnh sau một lần:
 
-Các trang: `/login`, `/register`, `/forgot-password`, `/reset-password`, `/auth/callback`, `/account`. Đăng ký có kiểm tra mật khẩu nhập lại; hỗ trợ hiện/ẩn mật khẩu, gửi lại xác nhận, đặt lại mật khẩu và đăng xuất. Liên kết email được xử lý theo implicit flow dành cho ứng dụng trình duyệt; token được kiểm tra qua Supabase trước khi nhận phiên và fragment chứa token được xóa khỏi thanh địa chỉ.
+   ```sql
+   insert into n3vjit_private.admin_roles(user_id)
+   select id from auth.users where lower(email) = 'nguyeenhuynhlong@gmail.com'
+   on conflict (user_id) do nothing;
+   ```
+
+   Vì xác nhận email đang tắt, chỉ chạy câu lệnh này sau khi đã xác minh chủ email để tránh cấp quyền cho người đăng ký giả mạo địa chỉ. Admin có thể mở `/admin` để xem người dùng và cấp/thu hồi quyền; xác thực quyền và danh sách đều kiểm tra ở Supabase.
+7. Khởi động lại `npm run dev` sau khi thay đổi biến môi trường. Khi triển khai, khai báo hai biến công khai tương ứng trong môi trường build của hosting, rồi build lại.
+
+Các trang: `/login`, `/register`, `/forgot-password`, `/reset-password`, `/auth/callback`, `/account`, `/study`, `/admin`. Đăng ký có kiểm tra mật khẩu nhập lại; hỗ trợ hiện/ẩn mật khẩu, gửi lại xác nhận, đặt lại mật khẩu và đăng xuất. Liên kết email được xử lý theo implicit flow dành cho ứng dụng trình duyệt; token được kiểm tra qua Supabase trước khi nhận phiên và fragment chứa token được xóa khỏi thanh địa chỉ.
 
 Mật khẩu chỉ được gửi đến Supabase Auth qua HTTPS, không lưu trong tiến độ hoặc trình duyệt. Trình duyệt lưu access/refresh token cho phiên đăng nhập; các token này không được đưa vào tệp sao lưu hoặc dữ liệu tiến độ trên database. Chỉ dùng publishable/anon key cho frontend, không dùng secret key, `service_role` hoặc mật khẩu database.
 

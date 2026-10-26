@@ -34,7 +34,7 @@ export function createAuthClient({ url = '', publicKey = '', storage, fetchImpl 
     const contentType = response.headers.get('content-type') || ''
     let data = null
     try { data = contentType.includes('json') ? await response.json() : null } catch { throw error('request_failed', response.status) }
-    if (!response.ok) throw error(data?.error_code || data?.error || (typeof data?.code === 'string' ? data.code : null) || (response.status === 401 ? 'session_not_found' : 'request_failed'), response.status)
+    if (!response.ok) throw error(data?.error_code || data?.error || (typeof data?.message === 'string' && ['admin_required', 'last_admin', 'user_not_found'].includes(data.message) ? data.message : null) || (typeof data?.code === 'string' ? data.code : null) || (response.status === 401 ? 'session_not_found' : 'request_failed'), response.status)
     if (!contentType.includes('json') && response.status !== 204) throw error('request_failed', response.status)
     return data
   }
@@ -207,6 +207,16 @@ export function createAuthClient({ url = '', publicKey = '', storage, fetchImpl 
         p_enabled: settings.enabled, p_local_time: settings.local_time,
         p_timezone: settings.timezone, p_weekdays: settings.weekdays,
       } })
+    },
+    async checkAdmin() {
+      const result = await authorizedRequest('/rest/v1/rpc/n3vjit_is_admin', { method: 'POST', body: {} })
+      return result === true
+    },
+    async listAdminUsers() {
+      return authorizedRequest('/rest/v1/rpc/n3vjit_admin_list_users', { method: 'POST', body: {} })
+    },
+    async setAdminRole(email, isAdmin) {
+      return authorizedRequest('/rest/v1/rpc/n3vjit_admin_set_role', { method: 'POST', body: { p_email: email, p_is_admin: isAdmin } })
     },
     async saveProgress(data, updatedAt = null, expectedUserId = null) {
       const current = await validSession()

@@ -40,7 +40,7 @@ export default function Dashboard() {
   useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 30000); return () => clearInterval(timer) }, [])
   const percentage = Math.round(done / QUIZ_TOTAL * 100)
   const todayTask = studyPlan.roadmap?.todayEvent
-  const continueTo = todayTask ? todayTask.kind === 'mock' ? '/exam' : '/exam?review=latest' : '/quiz'
+  const continueTo = todayTask ? todayTask.kind === 'mock' ? '/exam' : '/exam?review=latest' : '/study'
   const statItems = [
     done > 0 && { icon: Target, label: 'Câu hỏi đã làm', value: done, detail: `/ ${QUIZ_TOTAL} câu`, to: '/quiz' },
     readingDone > 0 && { icon: BookOpen, label: 'Bài đọc hoàn thành', value: readingDone, detail: `/ ${dokkai.length} bài`, to: '/dokkai' },
@@ -90,7 +90,7 @@ export default function Dashboard() {
         </div>
       </section>
       <StudyRoadmap stats={studyPlan} now={now} compact />
-      {statItems.length > 0 ? <div className="stat-grid">{statItems.map(item => <Stat key={item.label} {...item} />)}</div> : <section className="panel dashboard-start-tip"><span className="feature-icon"><BookOpen size={21} aria-hidden="true" /></span><div><h2>Bắt đầu từ đây</h2><p>Học phiên câu hỏi hôm nay, rồi mở một bộ flashcard để làm quen từ vựng.</p></div><Link to="/quiz" className="btn btn-primary">Bắt đầu học<ArrowRight size={16} aria-hidden="true" /></Link></section>}
+      {statItems.length > 0 ? <div className="stat-grid">{statItems.map(item => <Stat key={item.label} {...item} />)}</div> : <section className="panel dashboard-start-tip"><span className="feature-icon"><BookOpen size={21} aria-hidden="true" /></span><div><h2>Bắt đầu từ đây</h2><p>Học phiên câu hỏi hôm nay, rồi mở một bộ flashcard để làm quen từ vựng.</p></div><Link to="/study" className="btn btn-primary">Bắt đầu học<ArrowRight size={16} aria-hidden="true" /></Link></section>}
       <div className="dashboard-columns">
         <section aria-labelledby="sections-heading">
           <div className="section-heading"><h2 id="sections-heading">Ôn tập theo chuyên đề</h2><Link to="/grammar" className="text-link">Tra cứu ngữ pháp<ArrowRight size={14} aria-hidden="true" /></Link></div>

@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import { useEffect, useState } from 'react'
-import { BookOpen, CalendarDays, CheckCheck, ClipboardList, GraduationCap, Headphones, Layers, LayoutDashboard, LogIn, MessageCircle, PenLine, Sun, Moon, UserRound } from 'lucide-react'
+import { BookOpen, CalendarDays, CheckCheck, ClipboardList, GraduationCap, Headphones, Layers, LayoutDashboard, LogIn, MessageCircle, PenLine, ShieldCheck, Sun, Moon, UserRound } from 'lucide-react'
 import { getStudyRoadmap, setTheme as persistTheme } from '../utils/storage.js'
 import { studyDay } from '../utils/spacedRepetition.js'
 import { daysBetween, DEFAULT_EXAM_DATE, formatStudyDay } from '../utils/studyRoadmap.js'
@@ -9,6 +9,7 @@ import SyncStatus from './SyncStatus.jsx'
 
 const links = [
   { to: '/', label: 'Tổng quan', icon: LayoutDashboard },
+  { to: '/study', label: 'Học tập', icon: BookOpen },
   { to: '/quiz', label: 'Luyện câu hỏi', icon: ClipboardList },
   { to: '/exam', label: 'Thi thử', icon: CheckCheck },
   { to: '/dokkai', label: 'Đọc hiểu', icon: BookOpen },
@@ -26,9 +27,10 @@ function countdown(now, examDate) {
 }
 
 export default function Navbar({ theme, onTheme }) {
-  const { user, loading } = useAuth()
+  const { user, loading, isAdmin } = useAuth()
   const [now, setNow] = useState(Date.now)
   const clock = countdown(now, getStudyRoadmap()?.examDate || DEFAULT_EXAM_DATE)
+  const visibleLinks = isAdmin ? [...links, { to: '/admin', label: 'Admin', icon: ShieldCheck }] : links
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 60000)
     return () => clearInterval(id)
@@ -57,7 +59,7 @@ export default function Navbar({ theme, onTheme }) {
       </div>
       <nav className="study-nav" aria-label="Các phần học">
         <div className="study-nav-inner">
-          {links.map(({ to, label, icon: Icon }) => (
+          {visibleLinks.map(({ to, label, icon: Icon }) => (
             <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => `study-nav-link ${isActive ? 'is-active' : ''}`}>
               <Icon size={16} aria-hidden="true" /><span>{label}</span>
             </NavLink>
