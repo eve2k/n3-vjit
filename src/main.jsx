@@ -5,6 +5,7 @@ import './index.css'
 import App from './App.jsx'
 import { preloadVoices } from './utils/tts.js'
 import { getTheme } from './utils/storage.js'
+import { AuthProvider } from './context/AuthContext.jsx'
 
 document.documentElement.dataset.theme = getTheme()
 preloadVoices()
@@ -12,7 +13,9 @@ preloadVoices()
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
-      <App />
+      <AuthProvider>
+        <App />
+      </AuthProvider>
     </BrowserRouter>
   </StrictMode>,
 )

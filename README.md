@@ -44,6 +44,23 @@ Repository chỉ cần mã nguồn, tài nguyên trong `public/`, cấu hình v�
 - Sổ tay câu sai hỗ trợ câu trắc nghiệm, đọc hiểu và các câu nghe có đáp án. Trả lời đúng trong 2 lượt ôn để bỏ câu khỏi sổ tay.
 - Flashcard có bộ lọc thẻ chưa thuộc; chuyển thẻ sẽ trở về mặt câu hỏi.
 - Luyện câu hỏi, đọc hiểu, nghe và thi thử hỗ trợ phím 1–4 chọn đáp án theo thứ tự A–D (hoặc 1–4); Space xác nhận, Space lần nữa chuyển câu. Phím tắt không hoạt động khi nhập văn bản/điểm hoặc dùng nút điều khiển khác. Flashcard giữ Space để lật thẻ.
-- Dữ liệu lưu trong `localStorage` của trình duyệt, chưa có tài khoản hay đồng bộ giữa các thiết bị.
+- Chế độ khách vẫn dùng được ngay. Khi đăng nhập, tiến độ được lưu riêng theo tài khoản trên trình duyệt; tiến độ khách được giữ nguyên và có thể gộp từ trang **Tài khoản**.
+- Trang **Tài khoản** có nút lưu tiến độ lên Supabase và tải bản lưu về thiết bị khác. Đồng bộ do người học chủ động thực hiện; ứng dụng chưa tự tải hoặc ghi đè bản trực tuyến khi đăng nhập.
 - Dùng **Sao lưu** trên trang tổng quan để tải tệp JSON. **Khôi phục** hỗ trợ cả bản sao lưu cũ và định dạng có phiên bản mới, kiểm tra dữ liệu trước khi ghi. Các mục có trong tệp sẽ thay thế dữ liệu tương ứng trên máy.
 - Dữ liệu của `localhost` và tên miền công khai được lưu riêng. Hãy xuất tệp sao lưu rồi nhập trên tên miền mới khi chuyển sang website đã triển khai.
+
+## Đăng nhập / đăng ký với Supabase
+
+1. Sao chép `.env.example` thành `.env.local`, điền Project URL và publishable key (hoặc biến `VITE_SUPABASE_ANON_KEY` với anon key cũ). Dự án dùng Vite, vì vậy biến môi trường phải có tiền tố `VITE_`, không dùng `NEXT_PUBLIC_`. File `.env.local` được Git bỏ qua.
+2. Trong Supabase → Authentication → Providers, bật Email. Bật xác nhận email nếu muốn tài khoản chỉ đăng nhập sau khi xác minh địa chỉ.
+3. Trong Authentication → URL Configuration, đặt Site URL theo website đang chạy và thêm Redirect URL `http://localhost:5173/auth/callback` cùng `https://TEN_MIEN_CUA_BAN/auth/callback`. Nếu Vite chạy cổng khác, thêm URL đúng cổng đó.
+4. Để bật lưu tiến độ trực tuyến, chạy file `supabase/migrations/20261026_study_progress.sql` một lần bằng Supabase SQL Editor hoặc quy trình migrations của bạn. Migration tạo bảng `public.n3vjit_study_progress`, bật RLS và giới hạn đọc/ghi theo `auth.uid() = user_id`.
+5. Khởi động lại `npm run dev` sau khi thay đổi biến môi trường. Khi triển khai, khai báo hai biến công khai tương ứng trong môi trường build của hosting, rồi build lại.
+
+Các trang: `/login`, `/register`, `/forgot-password`, `/reset-password`, `/auth/callback`, `/account`. Đăng ký có kiểm tra mật khẩu nhập lại; hỗ trợ hiện/ẩn mật khẩu, gửi lại xác nhận, đặt lại mật khẩu và đăng xuất. Liên kết email được xử lý theo implicit flow dành cho ứng dụng trình duyệt; token được kiểm tra qua Supabase trước khi nhận phiên và fragment chứa token được xóa khỏi thanh địa chỉ.
+
+Mật khẩu chỉ được gửi đến Supabase Auth qua HTTPS, không lưu trong tiến độ hoặc trình duyệt. Trình duyệt lưu access/refresh token cho phiên đăng nhập; các token này không được đưa vào tệp sao lưu hoặc dữ liệu tiến độ trên database. Chỉ dùng publishable/anon key cho frontend, không dùng secret key, `service_role` hoặc mật khẩu database.
+
+Khi lưu lên tài khoản, ứng dụng kiểm tra mốc cập nhật của bản lưu để phát hiện thay đổi từ thiết bị khác. Khi tải hoặc gộp tiến độ, dữ liệu được kiểm tra trước khi thay thế; tiến độ khách và tài khoản khác không bị thay đổi. SQL migration không tự chạy khi build frontend.
+
+Tài liệu tham khảo: [Supabase Auth REST API](https://github.com/supabase/auth/blob/master/openapi.yaml), [xác thực bằng mật khẩu](https://supabase.com/docs/guides/auth/passwords), [RLS](https://supabase.com/docs/guides/database/postgres/row-level-security).

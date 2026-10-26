@@ -4,6 +4,7 @@ import { ArrowRight, BookOpen, CheckCircle2, ClipboardList, Download, Headphones
 import { quizSections, QUIZ_TOTAL, dokkai, kaiwaSakubun, flashcardDecks } from '../data/index.js'
 import { exportProgress, getCompletedQuestions, getCustomSakubun, getDokkaiProgress, getLastLesson, getMasteredFlashcards, getQuizHistory, getWrongQuestions, importProgress, resetAllProgress } from '../utils/storage.js'
 import { formatDuration, getContinueLesson, getMistakeQuestions, getQuizProgress, getSectionProgress } from '../utils/learning.js'
+import { useAuth } from '../context/authContext.js'
 
 const sectionNames = { fukushuu1: 'Câu đồng nghĩa', renshuu2: 'Từ vựng & kết hợp từ', renshuu3: 'Kanji', renshuu4: 'Ngữ pháp', renshuu5: 'Chia thể' }
 const skills = [
@@ -14,6 +15,7 @@ const skills = [
 ]
 
 export default function Dashboard() {
+  const { user } = useAuth()
   const [, refresh] = useState(0)
   const [notice, setNotice] = useState(null)
   const [importing, setImporting] = useState(false)
@@ -54,7 +56,7 @@ export default function Dashboard() {
     <div className="page-shell dashboard">
       <div className="page-heading">
         <div><p className="eyebrow">GÓC HỌC TẬP CỦA BẠN</p><h1>Hôm nay, mình học gì?</h1><p className="page-description">Một chút mỗi ngày, tiến gần N3 hơn.</p></div>
-        <span className="local-badge"><ShieldCheck size={15} aria-hidden="true" />Tiến độ lưu trên thiết bị này</span>
+        <Link to={user ? '/account' : '/login'} className="local-badge"><ShieldCheck size={15} aria-hidden="true" />{user ? 'Tiến độ riêng · Quản lý bản lưu' : 'Tiến độ khách · Đăng nhập để lưu theo tài khoản'}</Link>
       </div>
       <section className="study-hero" aria-labelledby="continue-heading">
         <div className="hero-copy">

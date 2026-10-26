@@ -1,7 +1,8 @@
 import { NavLink } from 'react-router-dom'
 import { useEffect, useState } from 'react'
-import { BookOpen, CalendarDays, CheckCheck, ClipboardList, GraduationCap, Headphones, Layers, LayoutDashboard, MessageCircle, PenLine, Sun, Moon } from 'lucide-react'
+import { BookOpen, CalendarDays, CheckCheck, ClipboardList, GraduationCap, Headphones, Layers, LayoutDashboard, LogIn, MessageCircle, PenLine, Sun, Moon, UserRound } from 'lucide-react'
 import { setTheme as persistTheme } from '../utils/storage.js'
+import { useAuth } from '../context/authContext.js'
 
 const EXAM = new Date('2026-11-21T08:00:00+07:00')
 const links = [
@@ -23,6 +24,7 @@ function countdown() {
 }
 
 export default function Navbar({ theme, onTheme }) {
+  const { user, loading } = useAuth()
   const [clock, setClock] = useState(countdown)
   useEffect(() => {
     const id = setInterval(() => setClock(countdown()), 60000)
@@ -39,6 +41,7 @@ export default function Navbar({ theme, onTheme }) {
         </NavLink>
         <div className="flex items-center gap-3">
           <span className="exam-countdown"><CalendarDays size={15} aria-hidden="true" />{clock}</span>
+          {!loading && <NavLink to={user ? '/account' : '/login'} className="btn btn-secondary nav-account-link" aria-label={user ? 'Mở tài khoản của tôi' : 'Đăng nhập hoặc đăng ký'}>{user ? <UserRound size={17} aria-hidden="true" /> : <LogIn size={17} aria-hidden="true" />}<span>{user ? 'Tài khoản' : 'Đăng nhập'}</span></NavLink>}
           <button type="button" className="icon-button"
             title={theme === 'dark' ? 'Chuyển sang giao diện sáng' : 'Chuyển sang giao diện tối'}
             aria-label={theme === 'dark' ? 'Chuyển sang giao diện sáng' : 'Chuyển sang giao diện tối'}

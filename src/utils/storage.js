@@ -12,11 +12,20 @@ const STORAGE_KEYS = {
   LAST_LESSON: 'n3vjit_lastLesson',
 };
 
+let storageUserId = null;
+const scopedKey = (key, userId = storageUserId) => key === STORAGE_KEYS.THEME || !userId ? key : `n3vjit_account:${encodeURIComponent(userId)}:${key}`;
+
+export const setStorageUser = (userId) => { storageUserId = userId || null; };
+
+function notifyProgressWrite() {
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event('n3vjit:progress-write'));
+}
+
 // ===== Generic Helpers =====
 
 const getItem = (key, defaultValue = null) => {
   try {
-    const item = localStorage.getItem(key);
+    const item = localStorage.getItem(scopedKey(key));
     return item ? JSON.parse(item) : defaultValue;
   } catch (e) {
     console.error(`Error reading ${key} from localStorage:`, e);
@@ -26,7 +35,8 @@ const getItem = (key, defaultValue = null) => {
 
 const setItem = (key, value) => {
   try {
-    localStorage.setItem(key, JSON.stringify(value));
+    localStorage.setItem(scopedKey(key), JSON.stringify(value));
+    notifyProgressWrite();
     return true;
   } catch (e) {
     console.error(`Error writing ${key} to localStorage:`, e);
@@ -148,13 +158,14 @@ export const saveCustomSakubun = (topicId, text) => {
 // ===== User Profile (for Kaiwa/Sakubun personalization) =====
 
 export const getUserProfile = () => {
-  return getItem(STORAGE_KEYS.USER_PROFILE, {
+  return {
     name: '',
     birthday: '',
     major: '',
     familyMembers: '',
     hobbies: '',
-  });
+    ...getItem(STORAGE_KEYS.USER_PROFILE, {}),
+  };
 };
 
 export const saveUserProfile = (profile) => {
@@ -217,7 +228,7 @@ export const markDokkaiCompleted = (passageId) => {
 export const exportProgress = () => {
   const data = {};
   Object.values(STORAGE_KEYS).forEach(key => {
-    const value = localStorage.getItem(key);
+    const value = localStorage.getItem(scopedKey(key));
     if (value) {
       data[key] = JSON.parse(value);
     }
@@ -282,15 +293,18 @@ export const parseProgressBackup = (text) => {
 };
 
 export const importProgress = (file) => {
+  const targetUserId = storageUserId;
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
         const entries = parseProgressBackup(e.target.result);
-        const previous = entries.map(([key]) => [key, localStorage.getItem(key)]);
+        const previous = entries.map(([key]) => [scopedKey(key, targetUserId), localStorage.getItem(scopedKey(key, targetUserId))]);
         try {
-          entries.forEach(([key, value]) => localStorage.setItem(key, JSON.stringify(value)));
+          entries.forEach(([key, value]) => localStorage.setItem(scopedKey(key, targetUserId), JSON.stringify(value)));
+          notifyProgressWrite();
         } catch (error) {
+          previous.forEach(([key]) => localStorage.removeItem(key));
           previous.forEach(([key, value]) => {
             if (value === null) localStorage.removeItem(key);
             else localStorage.setItem(key, value);
@@ -311,6 +325,33 @@ export const importProgress = (file) => {
 
 export const resetAllProgress = () => {
   Object.values(STORAGE_KEYS).forEach(key => {
-    localStorage.removeItem(key);
+    localStorage.removeItem(scopedKey(key));
   });
+  notifyProgressWrite();
+};
+
+export const readProgressSnapshot = (userId = storageUserId) => {
+  const snapshot = {};
+  for (const key of Object.values(STORAGE_KEYS).filter(key => key !== STORAGE_KEYS.THEME)) {
+    const value = localStorage.getItem(scopedKey(key, userId));
+    if (value !== null) snapshot[key] = JSON.parse(value);
+  }
+  if (Object.keys(snapshot).length) parseProgressBackup(JSON.stringify(snapshot));
+  return snapshot;
+};
+
+export const writeProgressSnapshot = (snapshot, userId = storageUserId) => {
+  if (!isRecord(snapshot)) throw new Error('Dữ liệu tiến độ không hợp lệ.');
+  const entries = Object.keys(snapshot).length ? parseProgressBackup(JSON.stringify(snapshot)).filter(([key]) => key !== STORAGE_KEYS.THEME) : [];
+  const keys = Object.values(STORAGE_KEYS).filter(key => key !== STORAGE_KEYS.THEME).map(key => scopedKey(key, userId));
+  const previous = keys.map(key => [key, localStorage.getItem(key)]);
+  try {
+    keys.forEach(key => localStorage.removeItem(key));
+    entries.forEach(([key, value]) => localStorage.setItem(scopedKey(key, userId), JSON.stringify(value)));
+  } catch (error) {
+    keys.forEach(key => localStorage.removeItem(key));
+    previous.forEach(([key, value]) => { if (value === null) localStorage.removeItem(key); else localStorage.setItem(key, value); });
+    throw error;
+  }
+  notifyProgressWrite();
 };
