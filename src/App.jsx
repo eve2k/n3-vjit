@@ -21,6 +21,7 @@ export default function App() {
   const location = useLocation()
   const { user, loading, sync } = useAuth()
   const accountKey = user?.id || 'guest'
+  const hideNavbar = ['/login', '/register'].includes(location.pathname)
   const callbackParams = new URLSearchParams(location.hash.replace(/^#/, ''))
   const callbackQuery = new URLSearchParams(location.search)
   const [theme, setTheme] = useState(getTheme)
@@ -47,7 +48,7 @@ export default function App() {
 
   return (
     <div className="min-h-svh pb-8">
-      <Navbar theme={theme} onTheme={setTheme} />
+      {!hideNavbar && <Navbar theme={theme} onTheme={setTheme} />}
       {!user && !loading && !location.pathname.startsWith('/auth/') && <div className="page-shell guest-notice"><p className="notice">Bạn đang học thử. Tiến độ và kết quả sẽ không được lưu. <a href="/login" className="text-link">Đăng nhập để lưu tiến độ</a></p></div>}
       <div id="main-content" tabIndex={-1}>
         {loading || (user && !sync.ready && location.pathname !== '/auth/callback') ? <div className="page-shell loading-state" role="status">{loading ? 'Đang khôi phục phiên đăng nhập…' : 'Đang tải tiến độ học tập…'}</div> :
