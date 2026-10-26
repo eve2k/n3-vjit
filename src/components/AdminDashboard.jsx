@@ -27,7 +27,8 @@ export default function AdminDashboard() {
       if (!Array.isArray(rows)) throw new Error('invalid_response')
       setUsers(rows)
       setNotice(null)
-    } catch (error) { setNotice({ error: true, text: adminErrorMessage(error) }) }
+      return true
+    } catch (error) { setNotice({ error: true, text: adminErrorMessage(error) }); return false }
     finally { setLoading(false) }
   }, [client])
 
@@ -47,8 +48,7 @@ export default function AdminDashboard() {
     setNotice(null)
     try {
       await client.setAdminRole(account.email, next)
-      setNotice({ error: false, text: next ? `Đã cấp quyền admin cho ${account.email}.` : `Đã thu hồi quyền admin của ${account.email}.` })
-      await loadUsers()
+      if (await loadUsers()) setNotice({ error: false, text: next ? `Đã cấp quyền admin cho ${account.email}.` : `Đã thu hồi quyền admin của ${account.email}.` })
     } catch (error) { setNotice({ error: true, text: adminErrorMessage(error) }) }
     finally { setBusyId('') }
   }
@@ -60,7 +60,7 @@ export default function AdminDashboard() {
     {notice && <p className={`notice ${notice.error ? 'notice-error' : 'notice-success'} mb-5`} role={notice.error ? 'alert' : 'status'}>{notice.text}</p>}
     <section className="panel admin-users-panel">
       <div className="admin-users-toolbar"><label htmlFor="admin-user-search">Tìm theo tên hoặc email</label><input id="admin-user-search" type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="name@example.com" /><button type="button" className="btn btn-secondary" disabled={loading} onClick={loadUsers}><RefreshCw size={16} aria-hidden="true" />Tải lại</button></div>
-      {loading ? <p className="loading-state" role="status">Đang tải danh sách tài khoản…</p> : visibleUsers.length ? <div className="admin-table-scroll"><table className="admin-users-table"><thead><tr><th>Tài khoản</th><th>Ngày tạo</th><th>Email</th><th>Quyền</th><th>Thao tác</th></tr></thead><tbody>{visibleUsers.map(account => <tr key={account.user_id}><td><strong>{account.display_name || 'Người học'}</strong><small>{account.email}</small></td><td>{formatDate(account.created_at)}</td><td><span className={`admin-confirmed ${account.email_confirmed ? 'is-confirmed' : ''}`}>{account.email_confirmed ? 'Đã xác minh' : 'Chưa xác minh'}</span></td><td>{account.is_admin ? <span className="admin-role-badge"><ShieldCheck size={14} aria-hidden="true" />Admin</span> : 'Người học'}</td><td><button type="button" className={`btn ${account.is_admin ? 'btn-secondary' : 'btn-primary'}`} disabled={Boolean(busyId)} onClick={() => changeRole(account)}>{busyId === account.user_id ? 'Đang lưu…' : account.is_admin ? 'Thu hồi quyền' : 'Cấp quyền admin'}</button></td></tr>)}</tbody></table></div> : <div className="empty-state"><UserRound size={28} aria-hidden="true" /><p>{query ? 'Không tìm thấy tài khoản phù hợp.' : 'Chưa có tài khoản người học.'}</p></div>}
+      {loading ? <p className="loading-state" role="status">Đang tải danh sách tài khoản…</p> : visibleUsers.length ? <div className="admin-table-scroll"><table className="admin-users-table"><thead><tr><th>Tài khoản</th><th>Ngày tạo</th><th>Xác minh</th><th>Quyền</th><th>Thao tác</th></tr></thead><tbody>{visibleUsers.map(account => <tr key={account.user_id}><td><strong>{account.display_name || 'Người học'}</strong><small>{account.email}</small></td><td>{formatDate(account.created_at)}</td><td><span className={`admin-confirmed ${account.email_confirmed ? 'is-confirmed' : ''}`}>{account.email_confirmed ? 'Đã xác minh' : 'Chưa xác minh'}</span></td><td>{account.is_admin ? <span className="admin-role-badge"><ShieldCheck size={14} aria-hidden="true" />Admin</span> : 'Người học'}</td><td><button type="button" className={`btn ${account.is_admin ? 'btn-secondary' : 'btn-primary'}`} disabled={Boolean(busyId)} onClick={() => changeRole(account)}>{busyId === account.user_id ? 'Đang lưu…' : account.is_admin ? 'Thu hồi quyền' : 'Cấp quyền admin'}</button></td></tr>)}</tbody></table></div> : <div className="empty-state"><UserRound size={28} aria-hidden="true" /><p>{query ? 'Không tìm thấy tài khoản phù hợp.' : 'Chưa có tài khoản người học.'}</p></div>}
       {!loading && <p className="admin-list-count">Hiển thị {visibleUsers.length} / {users.length} tài khoản · Đang đăng nhập: {user?.email}</p>}
     </section>
   </div>
