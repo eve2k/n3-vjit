@@ -1,5 +1,7 @@
 # Bản chạy thử trên laptop server
 
+**Cập nhật:** server đã chuyển sang Caddy với domain DuckDNS. Xem [cấu hình domain, firewall và dịch vụ đang dùng](DUCKDNS.md). Dịch vụ Vite preview mô tả bên dưới hiện được giữ làm phương án thử trước đây và đã disable; đường hầm SSH vẫn dùng được với Caddy trên cùng cổng 4173.
+
 URL dùng thử ngay trên laptop code: **http://127.0.0.1:4173**. Website chạy trên laptop server, truy cập qua đường hầm SSH từ laptop code.
 
 Server phục vụ tại `http://192.168.1.105:4173`, nhưng UFW hiện chưa cho phép kết nối từ LAN vào cổng 4173. Tài khoản `eve` không có quyền sudo nên bước chạy thử dùng đường hầm SSH, giữ nguyên cấu hình firewall.

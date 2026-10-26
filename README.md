@@ -74,3 +74,7 @@ Tài liệu tham khảo: [Supabase Auth REST API](https://github.com/supabase/au
 ## Email nhắc giờ học
 
 Trang Tài khoản có lịch nhắc theo ngày, giờ và múi giờ, mặc định tắt. Cần triển khai Supabase Edge Function + Cron và cấu hình Resend trước khi người học có thể bật email. Không cần dịch vụ email để chạy các tính năng học khác. Xem [hướng dẫn đầy đủ](supabase/REMINDERS.md); mã nguồn không chứa API key gửi email, và build frontend không tự tạo lịch hay gửi thư.
+
+## Triển khai trên laptop server
+
+Mã nguồn được đồng bộ qua Syncthing; Caddy phục vụ bản build trên cổng 4173 với domain `chungchitiengnhatvjit.duckdns.org`. Xem [cấu hình DuckDNS, UFW và Supabase callback](deploy/DUCKDNS.md). Sau khi mã đã đồng bộ, chạy `bash scripts/rebuild-server.sh` trên server để build lại và restart dịch vụ.
