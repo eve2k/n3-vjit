@@ -176,61 +176,16 @@ test('semantic snapshot equality does not depend on JSON object key ordering', (
 const memoryStorage = () => { const map = new Map(); return { getItem: key => map.get(key) || null, setItem: (key, value) => map.set(key, value), removeItem: key => map.delete(key), map } }
 const reply = data => new Response(JSON.stringify(data), { headers: { 'Content-Type': 'application/json' } })
 
-test('Google redirect uses PKCE, preflights provider readiness and stores only a verifier in session storage', async () => {
-  const oauthStorage = memoryStorage()
-  const client = createAuthClient({ url: 'https://project.supabase.co', publicKey: 'sb_publishable_test', oauthStorage, fetchImpl: async () => reply({ external: { google: true } }) })
-  const url = new URL(await client.getGoogleSignInUrl('http://localhost:5173/auth/callback'))
-  assert.equal(url.origin, 'https://project.supabase.co')
-  assert.equal(url.pathname, '/auth/v1/authorize')
-  assert.equal(url.searchParams.get('provider'), 'google')
-  assert.equal(url.searchParams.get('code_challenge_method'), 's256')
-  assert.equal(url.searchParams.get('prompt'), 'select_account')
-  const pending = JSON.parse([...oauthStorage.map.values()][0])
-  assert.ok(pending.verifier.length >= 43)
-  assert.ok(!url.href.includes(pending.verifier))
-  const challenge = Buffer.from(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pending.verifier))).toString('base64url')
-  assert.equal(url.searchParams.get('code_challenge'), challenge)
-})
-
-test('Google provider configuration, redirect safety and blocked storage fail before navigation', async () => {
-  const client = createAuthClient({ url: 'https://project.supabase.co', publicKey: 'sb_publishable_test', fetchImpl: async () => reply({ external: { google: false } }) })
-  await assert.rejects(client.getGoogleSignInUrl('https://app.example/auth/callback'), { code: 'google_not_configured' })
-  await assert.rejects(client.getGoogleSignInUrl('javascript:alert(1)'), { code: 'invalid_redirect' })
-  await assert.rejects(client.getGoogleSignInUrl('http://app.example/auth/callback'), { code: 'invalid_redirect' })
-  const blocked = createAuthClient({ url: 'https://project.supabase.co', publicKey: 'sb_publishable_test', fetchImpl: async () => reply({ external: { google: true } }) })
-  await assert.rejects(blocked.getGoogleSignInUrl('https://app.example/auth/callback'), { code: 'oauth_storage_unavailable' })
-})
-
-test('Google callback requires its initiating verifier, exchanges the code and never persists Google provider tokens', async () => {
-  const storage = memoryStorage()
-  const oauthStorage = memoryStorage()
+test('account-bound progress requests reject a different signed-in user before accessing the database', async () => {
   const calls = []
-  const client = createAuthClient({ url: 'https://project.supabase.co', publicKey: 'sb_publishable_test', storage, oauthStorage, fetchImpl: async (url, options) => {
-    calls.push({ url, body: options.body && JSON.parse(options.body) })
-    return reply(url.endsWith('/settings') ? { external: { google: true } } : { access_token: 'app-access', refresh_token: 'app-refresh', expires_in: 3600, provider_token: 'google-secret-not-saved', user: { id: 'google-user' } })
+  const client = createAuthClient({ url: 'https://project.supabase.co', publicKey: 'sb_publishable_test', fetchImpl: async url => {
+    calls.push(url)
+    return reply({ access_token: 'app-access', refresh_token: 'app-refresh', expires_in: 3600, user: { id: 'signed-in-user' } })
   } })
-  await assert.rejects(client.acceptCallback('', '?code=uninitiated'), { code: 'oauth_verifier_missing' })
-  await client.getGoogleSignInUrl('https://app.example/auth/callback')
-  assert.deepEqual(await client.acceptCallback('', '?code=one-time-code'), { recovery: false })
-  assert.ok(calls[1].url.endsWith('/token?grant_type=pkce'))
-  assert.equal(calls[1].body.auth_code, 'one-time-code')
-  assert.ok(calls[1].body.code_verifier)
-  assert.equal(oauthStorage.map.size, 0)
-  assert.ok(![...storage.map.values()].join('').includes('google-secret-not-saved'))
+  await client.signIn('learner@example.com', 'test-password')
   await assert.rejects(client.loadProgress('different-user'), { code: 'session_not_found' })
   await assert.rejects(client.saveProgress({}, null, 'different-user'), { code: 'session_not_found' })
-  assert.equal(calls.length, 2)
-})
-
-test('expired and cancelled Google callbacks cannot create a session', async () => {
-  const oauthStorage = memoryStorage()
-  let clock = 0
-  const client = createAuthClient({ url: 'https://project.supabase.co', publicKey: 'sb_publishable_test', oauthStorage, now: () => clock, fetchImpl: async () => reply({ external: { google: true } }) })
-  await client.getGoogleSignInUrl('https://app.example/auth/callback')
-  clock = 600001
-  await assert.rejects(client.acceptCallback('', '?code=expired'), { code: 'oauth_verifier_missing' })
-  await assert.rejects(client.acceptCallback('', '?error=access_denied'), { code: 'access_denied' })
-  assert.equal(oauthStorage.map.size, 0)
+  assert.equal(calls.length, 1)
 })
 
 test('reopening offline restores the known local account workspace while preserving server validation requirements', async () => {

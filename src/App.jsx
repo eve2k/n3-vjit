@@ -51,7 +51,7 @@ export default function App() {
       <div id="main-content" tabIndex={-1}>
         {loading || (user && !sync.ready && location.pathname !== '/auth/callback') ? <div className="page-shell loading-state" role="status">{loading ? 'Đang khôi phục phiên đăng nhập…' : 'Đang tải tiến độ học tập…'}</div> :
         <Suspense fallback={<div className="page-shell loading-state" role="status">Đang mở bài học…</div>}>
-          {location.pathname !== '/auth/callback' && (callbackParams.has('access_token') || callbackParams.has('error_code') || callbackQuery.has('code') || callbackQuery.has('error_code') || callbackQuery.has('error')) ? <Navigate to={`/auth/callback${location.search}${location.hash}`} replace /> :
+          {location.pathname !== '/auth/callback' && (callbackParams.has('access_token') || callbackParams.has('error_code') || callbackQuery.has('error_code') || callbackQuery.has('error')) ? <Navigate to={`/auth/callback${location.search}${location.hash}`} replace /> :
           <Routes>
             <Route path="/" element={<Dashboard key={accountKey} />} />
             <Route path="/quiz" element={new URLSearchParams(location.search).get('mode') === 'exam' ? <Navigate to="/exam" replace /> : <QuizEngine key={`${accountKey}:quiz${location.search}`} />} />

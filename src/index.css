@@ -505,10 +505,6 @@ input, select, textarea { accent-color: var(--accent); }
   *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
 }
 .reminder-form { display: grid; gap: 16px; margin-top: 20px; }
-.auth-google { width: 100%; margin-top: 20px; }
-.google-mark { font: 700 20px/1 system-ui, sans-serif; }
-.auth-divider { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 12px; margin: 18px 0; }
-.auth-divider::before, .auth-divider::after { content: ''; height: 1px; flex: 1; background: var(--line); }
 .sync-status { display: inline-flex; gap: 7px; align-items: center; color: var(--muted); font-size: 12px; }
 .sync-status[data-status="synced"] { color: var(--ok); }
 .sync-status[data-status="error"], .sync-status[data-status="offline"] { color: var(--warning); }
