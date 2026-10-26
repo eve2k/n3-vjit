@@ -85,7 +85,7 @@ export default function AuthPage({ mode = 'login' }) {
       </form>}
       {confirmationSent && <button type="button" className="btn btn-secondary w-full mt-3" disabled={busy} onClick={resend}>Gửi lại email xác nhận</button>}
       {!['login', 'register'].includes(mode) && <Link to="/login" className="text-link mt-5"><ArrowLeft size={15} aria-hidden="true" />Trở về đăng nhập</Link>}
-      <p className="auth-footer">Tiến độ khách trên thiết bị này được giữ lại khi bạn đăng nhập.</p>
+      <p className="auth-footer">Khách có thể học thử; đăng nhập trước khi học để lưu tiến độ.</p>
     </section>
   </div>
 }

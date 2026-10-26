@@ -24,6 +24,7 @@ function notifyProgressWrite(userId = storageUserId, key = null) {
 // ===== Generic Helpers =====
 
 const getItem = (key, defaultValue = null) => {
+  if (!storageUserId && key !== STORAGE_KEYS.THEME) return defaultValue;
   try {
     const item = localStorage.getItem(scopedKey(key));
     return item ? JSON.parse(item) : defaultValue;
@@ -34,6 +35,8 @@ const getItem = (key, defaultValue = null) => {
 };
 
 const setItem = (key, value) => {
+  // Guests may finish a practice session, but never persist learning data.
+  if (!storageUserId && key !== STORAGE_KEYS.THEME) return true;
   try {
     localStorage.setItem(scopedKey(key), JSON.stringify(value));
     notifyProgressWrite(storageUserId, key);
@@ -226,6 +229,7 @@ export const markDokkaiCompleted = (passageId) => {
 // ===== Export/Import Progress =====
 
 export const exportProgress = () => {
+  if (!storageUserId) throw new Error('Đăng nhập để sao lưu tiến độ.');
   const data = {};
   Object.values(STORAGE_KEYS).forEach(key => {
     const value = localStorage.getItem(scopedKey(key));
@@ -294,6 +298,7 @@ export const parseProgressBackup = (text) => {
 
 export const importProgress = (file) => {
   const targetUserId = storageUserId;
+  if (!targetUserId) return Promise.reject(new Error('Đăng nhập để khôi phục tiến độ.'));
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -324,6 +329,7 @@ export const importProgress = (file) => {
 // ===== Reset All Data =====
 
 export const resetAllProgress = () => {
+  if (!storageUserId) return;
   Object.values(STORAGE_KEYS).forEach(key => {
     localStorage.removeItem(scopedKey(key));
   });
@@ -331,6 +337,7 @@ export const resetAllProgress = () => {
 };
 
 export const readProgressSnapshot = (userId = storageUserId) => {
+  if (!userId) return {};
   const snapshot = {};
   for (const key of Object.values(STORAGE_KEYS).filter(key => key !== STORAGE_KEYS.THEME)) {
     const value = localStorage.getItem(scopedKey(key, userId));
@@ -341,6 +348,7 @@ export const readProgressSnapshot = (userId = storageUserId) => {
 };
 
 export const writeProgressSnapshot = (snapshot, userId = storageUserId, { notify = true } = {}) => {
+  if (!userId) throw new Error('Đăng nhập để lưu tiến độ.');
   if (!isRecord(snapshot)) throw new Error('Dữ liệu tiến độ không hợp lệ.');
   const entries = Object.keys(snapshot).length ? parseProgressBackup(JSON.stringify(snapshot)).filter(([key]) => key !== STORAGE_KEYS.THEME) : [];
   const keys = Object.values(STORAGE_KEYS).filter(key => key !== STORAGE_KEYS.THEME).map(key => scopedKey(key, userId));

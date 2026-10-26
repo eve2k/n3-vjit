@@ -36,10 +36,11 @@ export default function Dashboard() {
   const continueTo = next ? `/quiz?section=${next.section.id}&question=${next.question.id}` : '/quiz'
 
   const restore = async (event) => {
+    if (!user) return
     const file = event.target.files?.[0]
     event.target.value = ''
     if (!file) return
-    if (!window.confirm(user ? 'Khôi phục sẽ thay thế các mục tiến độ có trong tệp sao lưu và đồng bộ thay đổi lên tài khoản, sang các thiết bị khác. Bạn muốn tiếp tục?' : 'Khôi phục sẽ thay thế các mục tiến độ khách có trong tệp sao lưu trên thiết bị này. Bạn muốn tiếp tục?')) return
+    if (!window.confirm('Khôi phục sẽ thay thế các mục tiến độ có trong tệp sao lưu và đồng bộ thay đổi lên tài khoản, sang các thiết bị khác. Bạn muốn tiếp tục?')) return
     setImporting(true)
     setNotice(null)
     try {
@@ -56,7 +57,7 @@ export default function Dashboard() {
     <div className="page-shell dashboard">
       <div className="page-heading">
         <div><p className="eyebrow">GÓC HỌC TẬP CỦA BẠN</p><h1>Hôm nay, mình học gì?</h1><p className="page-description">Một chút mỗi ngày, tiến gần N3 hơn.</p></div>
-        <Link to={user ? '/account' : '/login'} className="local-badge"><ShieldCheck size={15} aria-hidden="true" />{user ? 'Tiến độ tự đồng bộ · Tài khoản' : 'Tiến độ khách · Đăng nhập để tự đồng bộ'}</Link>
+        <Link to={user ? '/account' : '/login'} className="local-badge"><ShieldCheck size={15} aria-hidden="true" />{user ? 'Tiến độ tự đồng bộ · Tài khoản' : 'Học thử · Đăng nhập để lưu tiến độ'}</Link>
       </div>
       <section className="study-hero" aria-labelledby="continue-heading">
         <div className="hero-copy">
@@ -123,17 +124,17 @@ export default function Dashboard() {
           <ExamHistoryRow key={result.id || `${result.date}-${index}`} result={result} />
         ))}</div> : <div className="empty-state"><ClipboardList size={30} aria-hidden="true" /><p>Chưa có bài thi nào. Thử một đề để biết mình đang ở đâu nhé.</p><Link to="/exam" className="text-link">Làm đề đầu tiên<ArrowRight size={15} aria-hidden="true" /></Link></div>}
       </section>
-      <section className="panel backup-panel" aria-labelledby="backup-heading">
-        <div><h2 id="backup-heading"><ShieldCheck size={19} aria-hidden="true" />Giữ lại hành trình học của bạn</h2><p>{user ? 'Tiến độ tự đồng bộ theo tài khoản. Bạn vẫn có thể tải thêm tệp sao lưu để giữ một bản riêng.' : 'Tiến độ khách lưu trong trình duyệt này. Đăng nhập để tự đồng bộ hoặc tải bản sao lưu để chuyển máy.'}</p></div>
+      {user && <section className="panel backup-panel" aria-labelledby="backup-heading">
+        <div><h2 id="backup-heading"><ShieldCheck size={19} aria-hidden="true" />Giữ lại hành trình học của bạn</h2><p>{user ? 'Tiến độ tự đồng bộ theo tài khoản. Bạn vẫn có thể tải thêm tệp sao lưu để giữ một bản riêng.' : 'Khách có thể học thử. Đăng nhập để lưu tiến độ.'}</p></div>
         <div className="flex flex-wrap gap-2">
           <button type="button" className="btn btn-secondary" onClick={() => { try { exportProgress(); setNotice({ text: 'Đã tạo bản sao lưu. Kiểm tra tệp trong mục tải xuống.', error: false }) } catch { setNotice({ text: 'Không thể tạo bản sao lưu. Hãy thử lại.', error: true }) } }}><Download size={16} aria-hidden="true" />Sao lưu</button>
           <button type="button" className="btn btn-secondary" disabled={importing} onClick={() => fileInput.current?.click()}><Upload size={16} aria-hidden="true" />{importing ? 'Đang khôi phục…' : 'Khôi phục'}</button>
           <input ref={fileInput} type="file" accept="application/json,.json" className="hidden" aria-label="Chọn tệp sao lưu tiến độ" onChange={restore} />
         </div>
         {notice && <p className={`notice ${notice.error ? 'notice-error' : 'notice-success'}`} role={notice.error ? 'alert' : 'status'}>{notice.text}</p>}
-        <details className="reset-details"><summary>Quản lý dữ liệu học tập</summary><p>{user ? 'Xóa tiến độ của tài khoản để bắt đầu lại. Thay đổi sẽ đồng bộ sang các thiết bị khác.' : 'Xóa tiến độ khách trên thiết bị này để bắt đầu lại.'} Hãy tải bản sao lưu trước nếu muốn giữ dữ liệu.</p><button type="button" className="btn btn-danger" onClick={() => { if (window.confirm(user ? 'Xóa toàn bộ tiến độ của tài khoản này? Thay đổi sẽ đồng bộ lên tài khoản và các thiết bị khác. Hãy chắc chắn bạn đã tải bản sao lưu nếu cần.' : 'Xóa toàn bộ tiến độ khách trên thiết bị này? Bạn chỉ có thể khôi phục nếu đã tải bản sao lưu.')) { resetAllProgress(); window.dispatchEvent(new Event('n3vjit:progress')); refresh((value) => value + 1); setNotice({ text: user ? 'Đã xóa tiến độ. Thay đổi sẽ được đồng bộ lên tài khoản.' : 'Đã xóa tiến độ khách trên thiết bị này.', error: false }) } }}>Xóa tiến độ học tập</button></details>
+        <details className="reset-details"><summary>Quản lý dữ liệu học tập</summary><p>{user ? 'Xóa tiến độ của tài khoản để bắt đầu lại. Thay đổi sẽ đồng bộ sang các thiết bị khác.' : 'Chế độ khách không lưu tiến độ.'} Hãy tải bản sao lưu trước nếu muốn giữ dữ liệu.</p><button type="button" className="btn btn-danger" onClick={() => { if (window.confirm(user ? 'Xóa toàn bộ tiến độ của tài khoản này? Thay đổi sẽ đồng bộ lên tài khoản và các thiết bị khác. Hãy chắc chắn bạn đã tải bản sao lưu nếu cần.' : 'Xóa toàn bộ tiến độ khách trên thiết bị này? Bạn chỉ có thể khôi phục nếu đã tải bản sao lưu.')) { resetAllProgress(); window.dispatchEvent(new Event('n3vjit:progress')); refresh((value) => value + 1); setNotice({ text: user ? 'Đã xóa tiến độ. Thay đổi sẽ được đồng bộ lên tài khoản.' : 'Chế độ khách không lưu tiến độ.', error: false }) } }}>Xóa tiến độ học tập</button></details>
       </section>
-      <p className="dashboard-footer">N3-VJIT · Mỗi lần ôn tập đều được tính.</p>
+      }<p className="dashboard-footer">N3-VJIT · Mỗi lần ôn tập đều được tính.</p>
     </div>
   )
 }

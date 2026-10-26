@@ -164,7 +164,7 @@ test('guest progress and different users remain isolated across account changes'
   setStorageUser('user-b')
   assert.deepEqual(getCompletedQuestions(), { fukushuu1: ['f1_q3'] })
   setStorageUser(null)
-  assert.deepEqual(getCompletedQuestions(), { fukushuu1: ['f1_q1'] })
+  assert.deepEqual(getCompletedQuestions(), {})
 })
 
 test('progress snapshots contain study data only, never session tokens or another account', () => {
@@ -175,7 +175,7 @@ test('progress snapshots contain study data only, never session tokens or anothe
   const snapshot = readProgressSnapshot()
   assert.deepEqual(snapshot, { n3vjit_completedQuestions: { fukushuu1: ['f1_q2'] } })
   assert.ok(!JSON.stringify(snapshot).includes('private-refresh'))
-  assert.deepEqual(readProgressSnapshot(null), { n3vjit_completedQuestions: { fukushuu1: ['f1_q1'] } })
+  assert.deepEqual(readProgressSnapshot(null), {})
 })
 
 test('cloud restore validates before changing data and writes only to the requested account', () => {
@@ -187,7 +187,7 @@ test('cloud restore validates before changing data and writes only to the reques
   assert.deepEqual(readProgressSnapshot('user-a'), { n3vjit_completedQuestions: { fukushuu1: ['f1_q2'] } })
 })
 
-test('merging guest progress is additive, keeps the latest writing and is idempotent', () => {
+test('merging initial account snapshots is additive, keeps the latest writing and is idempotent', () => {
   const account = { n3vjit_completedQuestions: { fukushuu1: ['f1_q2'] }, n3vjit_masteredFlashcards: ['card1'], n3vjit_customSakubun: { topic: { text: 'new', updatedAt: '2026-10-26T00:00:00Z' } }, n3vjit_wrongQuestions: { fukushuu1: { q: { count: 2, correctStreak: 0 } } } }
   const guest = { n3vjit_completedQuestions: { fukushuu1: ['f1_q1', 'f1_q2'] }, n3vjit_masteredFlashcards: ['card1', 'card2'], n3vjit_customSakubun: { topic: { text: 'old', updatedAt: '2026-10-25T00:00:00Z' } }, n3vjit_wrongQuestions: { fukushuu1: { q: { count: 1, correctStreak: 0 } } } }
   const merged = mergeProgress(account, guest)
@@ -221,7 +221,7 @@ test('a failed cloud restore rolls back the account snapshot without touching gu
   assert.deepEqual(getCompletedQuestions(), { fukushuu1: ['f1_q2'] })
   assert.equal(localStorage.getItem('n3vjit_auth:test'), 'keep-session')
   setStorageUser(null)
-  assert.deepEqual(getCompletedQuestions(), { fukushuu1: ['f1_q1'] })
+  assert.deepEqual(getCompletedQuestions(), {})
 })
 
 test('an in-flight backup import keeps its original account if the user switches accounts before the file finishes reading', async () => {

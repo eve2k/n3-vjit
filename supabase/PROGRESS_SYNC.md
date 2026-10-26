@@ -10,11 +10,13 @@ Tiến độ lưu trong bảng Supabase `public.n3vjit_study_progress`, gắn v�
 
 ## Người học sử dụng thế nào?
 
+Khách vãng lai không lưu tiến độ, lịch sử thi, flashcard hay bài viết và không có chức năng sao lưu/khôi phục. Chỉ kết quả đang xem trong lượt học hiện tại được giữ tạm trong giao diện. Dữ liệu khách từ phiên bản cũ được bỏ qua, không tự gộp vào tài khoản.
+
 - Đăng nhập cùng tài khoản email trên điện thoại/laptop. Tiến độ tự tải trước khi mở bài học; dữ liệu của từng tài khoản được lưu riêng.
 - Các thay đổi tiến độ tự được đồng bộ sau khoảng 800ms ngừng thay đổi. Ứng dụng cũng kiểm tra lại khi mở tab, có mạng trở lại và mỗi phút khi tab đang hiển thị.
 - Nhãn trạng thái ở thanh điều hướng và trang Tài khoản cho biết đang đồng bộ, đã đồng bộ hoặc còn lưu trên thiết bị. Chỉ chuyển thiết bị sau khi thấy **Đã đồng bộ** nếu cần tiếp tục ngay.
 - Mất mạng vẫn học được. Thay đổi giữ trên trình duyệt, tự thử lại với thời gian chờ tăng dần tối đa 60 giây; đóng trang ngay trước khi lưu xong có thể hoãn đồng bộ đến lần mở lại/đăng nhập lại. Không hứa gửi được request khi trình duyệt đã đóng.
-- Lần đầu dùng đồng bộ tự động, tiến độ riêng của tài khoản trên thiết bị được gộp với bản lưu hiện có. Tiến độ khách chỉ gộp khi bạn nhấn nút gộp trong Tài khoản.
+- Lần đầu dùng đồng bộ tự động, tiến độ riêng của tài khoản trên thiết bị được gộp với bản lưu hiện có. Khách chỉ học thử, không lưu tiến độ; cần đăng nhập trước khi học.
 - Bài viết chỉ đồng bộ sau khi đã lưu trong phần viết; bài thi đồng bộ khi có kết quả được lưu. Nội dung đang gõ/chưa nộp không phải bản lưu hoàn chỉnh.
 
 ## Xung đột và dữ liệu cũ

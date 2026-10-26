@@ -44,10 +44,10 @@ Repository chỉ cần mã nguồn, tài nguyên trong `public/`, cấu hình v�
 - Sổ tay câu sai hỗ trợ câu trắc nghiệm, đọc hiểu và các câu nghe có đáp án. Trả lời đúng trong 2 lượt ôn để bỏ câu khỏi sổ tay.
 - Flashcard có bộ lọc thẻ chưa thuộc; chuyển thẻ sẽ trở về mặt câu hỏi.
 - Luyện câu hỏi, đọc hiểu, nghe và thi thử hỗ trợ phím 1–4 chọn đáp án theo thứ tự A–D (hoặc 1–4); Space xác nhận, Space lần nữa chuyển câu. Phím tắt không hoạt động khi nhập văn bản/điểm hoặc dùng nút điều khiển khác. Flashcard giữ Space để lật thẻ.
-- Chế độ khách vẫn dùng được ngay. Khi đăng nhập, tiến độ được lưu riêng theo tài khoản trên trình duyệt; tiến độ khách được giữ nguyên và có thể gộp từ trang **Tài khoản**.
+- Chế độ khách chỉ học thử và xem kết quả trong lượt hiện tại, không lưu tiến độ, bài viết hay lịch sử thi. Cần đăng nhập trước khi học để lưu và tự đồng bộ.
 - Đăng nhập bằng email để tự tải và tự đồng bộ tiến độ lên Supabase; trang **Tài khoản** hiển thị trạng thái và có nút thử đồng bộ ngay. Mất mạng vẫn giữ dữ liệu trên thiết bị và tự thử lại.
 - Dùng **Sao lưu** trên trang tổng quan để tải tệp JSON. **Khôi phục** hỗ trợ cả bản sao lưu cũ và định dạng có phiên bản mới, kiểm tra dữ liệu trước khi ghi. Các mục có trong tệp sẽ thay thế dữ liệu tương ứng trên máy.
-- Dữ liệu khách của `localhost` và tên miền công khai được lưu riêng; dùng tệp sao lưu để chuyển. Tiến độ tài khoản đã đồng bộ có thể tải lại khi đăng nhập cùng tài khoản trên website dùng cùng project Supabase.
+- Khách không lưu tiến độ trên trình duyệt. Tiến độ tài khoản đã đồng bộ có thể tải lại khi đăng nhập cùng tài khoản trên website dùng cùng project Supabase.
 
 ## Đăng nhập / đăng ký với Supabase
 
@@ -61,7 +61,7 @@ Các trang: `/login`, `/register`, `/forgot-password`, `/reset-password`, `/auth
 
 Mật khẩu chỉ được gửi đến Supabase Auth qua HTTPS, không lưu trong tiến độ hoặc trình duyệt. Trình duyệt lưu access/refresh token cho phiên đăng nhập; các token này không được đưa vào tệp sao lưu hoặc dữ liệu tiến độ trên database. Chỉ dùng publishable/anon key cho frontend, không dùng secret key, `service_role` hoặc mật khẩu database.
 
-Sau khi đăng nhập, tiến độ tự tải và tự đồng bộ lên tài khoản trong quá trình học. Ứng dụng giữ bản cục bộ để dùng khi mất mạng và tự thử lại khi kết nối trở lại. Nhãn “Đã đồng bộ” cho biết bản lưu đã được server xác nhận; không cần bấm lưu/tải thủ công. Thao tác gộp tiến độ khách vẫn do bạn chủ động chọn. SQL migration không tự chạy khi build frontend.
+Sau khi đăng nhập, tiến độ tự tải và tự đồng bộ lên tài khoản trong quá trình học. Ứng dụng giữ bản cục bộ để dùng khi mất mạng và tự thử lại khi kết nối trở lại. Nhãn “Đã đồng bộ” cho biết bản lưu đã được server xác nhận; không cần bấm lưu/tải thủ công. Chế độ khách không lưu và không gộp tiến độ vào tài khoản. SQL migration không tự chạy khi build frontend.
 
 Đăng nhập bằng email và mật khẩu để dùng tự đồng bộ. Xem [hướng dẫn tự đồng bộ tiến độ](supabase/PROGRESS_SYNC.md), gồm cách thiết lập bảng lưu, xử lý mất mạng, xung đột giữa thiết bị và kiểm tra thực tế.
 

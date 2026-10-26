@@ -3,9 +3,10 @@ import { beforeEach, test } from 'node:test'
 import { allQuizQuestions, quizSections, dokkai } from '../data/index.js'
 import { getContinueLesson, getMistakeQuestions, getQuizProgress, getSectionProgress, gradeExam, reviewQuestions } from './learning.js'
 import { recordExamAttempt } from './exam.js'
-import { getCompletedQuestions, getQuizHistory, getWrongQuestions, importProgress, parseProgressBackup } from './storage.js'
+import { getCompletedQuestions, getQuizHistory, getWrongQuestions, importProgress, parseProgressBackup, setStorageUser } from './storage.js'
 
 beforeEach(() => {
+  setStorageUser('test-learner')
   const data = new Map()
   globalThis.localStorage = {
     getItem: (key) => data.get(key) ?? null,
@@ -114,7 +115,7 @@ test('restore rolls back previous changes if browser storage refuses a write', a
   const write = localStorage.setItem
   let shouldFail = true
   localStorage.setItem = (key, value) => {
-    if (key === 'n3vjit_masteredFlashcards' && shouldFail) { shouldFail = false; throw new Error('Quota exceeded') }
+    if (key.endsWith('n3vjit_masteredFlashcards') && shouldFail) { shouldFail = false; throw new Error('Quota exceeded') }
     write(key, value)
   }
   await assert.rejects(importProgress({ text: JSON.stringify({ n3vjit_theme: 'modern', n3vjit_masteredFlashcards: ['card1'] }) }))

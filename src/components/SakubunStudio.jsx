@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { kaiwaSakubun } from '../data/index.js'
 import SpeakButton from './SpeakButton.jsx'
+import { useAuth } from '../context/authContext.js'
 import { getCustomSakubun, getUserProfile, saveCustomSakubun, saveUserProfile } from '../utils/storage.js'
 
 function personalize(text, profile) {
@@ -12,6 +13,7 @@ function personalize(text, profile) {
 }
 
 export default function SakubunStudio() {
+  const { user } = useAuth()
   const [profile, setProfile] = useState(getUserProfile())
   const [topicId, setTopicId] = useState(kaiwaSakubun.sakubun[0].id)
   const saved = getCustomSakubun()
@@ -86,6 +88,8 @@ export default function SakubunStudio() {
               <button
                 type="button"
                 className="rounded border border-[var(--line)] px-2 py-1 text-sm"
+                disabled={!user}
+                title={!user ? 'Đăng nhập để lưu bài viết' : undefined}
                 onClick={() => {
                   saveCustomSakubun(topic.id, text)
                 }}

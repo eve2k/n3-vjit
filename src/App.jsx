@@ -48,6 +48,7 @@ export default function App() {
   return (
     <div className="min-h-svh pb-8">
       <Navbar theme={theme} onTheme={setTheme} />
+      {!user && !loading && !location.pathname.startsWith('/auth/') && <div className="page-shell guest-notice"><p className="notice">Bạn đang học thử. Tiến độ và kết quả sẽ không được lưu. <a href="/login" className="text-link">Đăng nhập để lưu tiến độ</a></p></div>}
       <div id="main-content" tabIndex={-1}>
         {loading || (user && !sync.ready && location.pathname !== '/auth/callback') ? <div className="page-shell loading-state" role="status">{loading ? 'Đang khôi phục phiên đăng nhập…' : 'Đang tải tiến độ học tập…'}</div> :
         <Suspense fallback={<div className="page-shell loading-state" role="status">Đang mở bài học…</div>}>

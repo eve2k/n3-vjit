@@ -2,9 +2,10 @@ import assert from 'node:assert/strict'
 import { beforeEach, test } from 'node:test'
 import { allQuizQuestions, dokkai } from '../data/index.js'
 import { createMockExam, getMockExamQuestions, getOverallStatus, getScoreStatus, gradeMockExam, parseManualScore, restoreMockExam, saveMockExamAttempt, serializeMockExam } from './mockExam.js'
-import { getQuizHistory, getWrongQuestions, parseProgressBackup } from './storage.js'
+import { getQuizHistory, getWrongQuestions, parseProgressBackup, setStorageUser } from './storage.js'
 
 beforeEach(() => {
+  setStorageUser('test-learner')
   const data = new Map()
   globalThis.localStorage = {
     getItem: (key) => data.get(key) ?? null,
