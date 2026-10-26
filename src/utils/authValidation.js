@@ -12,6 +12,11 @@ export function validateAuthForm(mode, fields) {
 
 export function authErrorMessage(error) {
   const messages = {
+    google_not_configured: 'Đăng nhập Google chưa được bật. Quản trị viên cần cấu hình Google trong Supabase.',
+    oauth_storage_unavailable: 'Trình duyệt đang chặn lưu trữ cần cho đăng nhập Google. Hãy cho phép lưu trữ và thử lại.',
+    oauth_verifier_missing: 'Phiên đăng nhập Google đã hết hạn hoặc được mở ở trình duyệt khác. Hãy bắt đầu đăng nhập lại.',
+    access_denied: 'Bạn đã hủy đăng nhập Google. Có thể thử lại khi sẵn sàng.',
+    oauth_callback_error: 'Chưa hoàn tất đăng nhập Google. Hãy thử lại.',
     invalid_credentials: 'Email hoặc mật khẩu chưa đúng.',
     invalid_grant: 'Email hoặc mật khẩu chưa đúng, hoặc phiên đăng nhập đã hết hạn.',
     bad_jwt: 'Phiên hoặc liên kết đăng nhập không còn hợp lệ. Hãy đăng nhập lại.',

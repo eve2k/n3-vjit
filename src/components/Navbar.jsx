@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { BookOpen, CalendarDays, CheckCheck, ClipboardList, GraduationCap, Headphones, Layers, LayoutDashboard, LogIn, MessageCircle, PenLine, Sun, Moon, UserRound } from 'lucide-react'
 import { setTheme as persistTheme } from '../utils/storage.js'
 import { useAuth } from '../context/authContext.js'
+import SyncStatus from './SyncStatus.jsx'
 
 const EXAM = new Date('2026-11-21T08:00:00+07:00')
 const links = [
@@ -40,6 +41,7 @@ export default function Navbar({ theme, onTheme }) {
           <span><strong>N3<span className="text-[var(--accent)]">・</span>VJIT</strong><small>Học đều mỗi ngày</small></span>
         </NavLink>
         <div className="flex items-center gap-3">
+          <SyncStatus compact />
           <span className="exam-countdown"><CalendarDays size={15} aria-hidden="true" />{clock}</span>
           {!loading && <NavLink to={user ? '/account' : '/login'} className="btn btn-secondary nav-account-link" aria-label={user ? 'Mở tài khoản của tôi' : 'Đăng nhập hoặc đăng ký'}>{user ? <UserRound size={17} aria-hidden="true" /> : <LogIn size={17} aria-hidden="true" />}<span>{user ? 'Tài khoản' : 'Đăng nhập'}</span></NavLink>}
           <button type="button" className="icon-button"

@@ -19,9 +19,10 @@ const AccountPage = lazy(() => import('./components/AccountPage.jsx'))
 
 export default function App() {
   const location = useLocation()
-  const { user, loading } = useAuth()
+  const { user, loading, sync } = useAuth()
   const accountKey = user?.id || 'guest'
   const callbackParams = new URLSearchParams(location.hash.replace(/^#/, ''))
+  const callbackQuery = new URLSearchParams(location.search)
   const [theme, setTheme] = useState(getTheme)
 
   useEffect(() => {
@@ -48,9 +49,9 @@ export default function App() {
     <div className="min-h-svh pb-8">
       <Navbar theme={theme} onTheme={setTheme} />
       <div id="main-content" tabIndex={-1}>
-        {loading ? <div className="page-shell loading-state" role="status">Đang khôi phục phiên đăng nhập…</div> :
+        {loading || (user && !sync.ready && location.pathname !== '/auth/callback') ? <div className="page-shell loading-state" role="status">{loading ? 'Đang khôi phục phiên đăng nhập…' : 'Đang tải tiến độ học tập…'}</div> :
         <Suspense fallback={<div className="page-shell loading-state" role="status">Đang mở bài học…</div>}>
-          {location.pathname !== '/auth/callback' && (callbackParams.has('access_token') || callbackParams.has('error_code')) ? <Navigate to={`/auth/callback${location.hash}`} replace /> :
+          {location.pathname !== '/auth/callback' && (callbackParams.has('access_token') || callbackParams.has('error_code') || callbackQuery.has('code') || callbackQuery.has('error_code') || callbackQuery.has('error')) ? <Navigate to={`/auth/callback${location.search}${location.hash}`} replace /> :
           <Routes>
             <Route path="/" element={<Dashboard key={accountKey} />} />
             <Route path="/quiz" element={new URLSearchParams(location.search).get('mode') === 'exam' ? <Navigate to="/exam" replace /> : <QuizEngine key={`${accountKey}:quiz${location.search}`} />} />

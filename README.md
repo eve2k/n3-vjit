@@ -45,9 +45,9 @@ Repository chỉ cần mã nguồn, tài nguyên trong `public/`, cấu hình v�
 - Flashcard có bộ lọc thẻ chưa thuộc; chuyển thẻ sẽ trở về mặt câu hỏi.
 - Luyện câu hỏi, đọc hiểu, nghe và thi thử hỗ trợ phím 1–4 chọn đáp án theo thứ tự A–D (hoặc 1–4); Space xác nhận, Space lần nữa chuyển câu. Phím tắt không hoạt động khi nhập văn bản/điểm hoặc dùng nút điều khiển khác. Flashcard giữ Space để lật thẻ.
 - Chế độ khách vẫn dùng được ngay. Khi đăng nhập, tiến độ được lưu riêng theo tài khoản trên trình duyệt; tiến độ khách được giữ nguyên và có thể gộp từ trang **Tài khoản**.
-- Trang **Tài khoản** có nút lưu tiến độ lên Supabase và tải bản lưu về thiết bị khác. Đồng bộ do người học chủ động thực hiện; ứng dụng chưa tự tải hoặc ghi đè bản trực tuyến khi đăng nhập.
+- Đăng nhập bằng Google hoặc email để tự tải và tự đồng bộ tiến độ lên Supabase; trang **Tài khoản** hiển thị trạng thái và có nút thử đồng bộ ngay. Mất mạng vẫn giữ dữ liệu trên thiết bị và tự thử lại.
 - Dùng **Sao lưu** trên trang tổng quan để tải tệp JSON. **Khôi phục** hỗ trợ cả bản sao lưu cũ và định dạng có phiên bản mới, kiểm tra dữ liệu trước khi ghi. Các mục có trong tệp sẽ thay thế dữ liệu tương ứng trên máy.
-- Dữ liệu của `localhost` và tên miền công khai được lưu riêng. Hãy xuất tệp sao lưu rồi nhập trên tên miền mới khi chuyển sang website đã triển khai.
+- Dữ liệu khách của `localhost` và tên miền công khai được lưu riêng; dùng tệp sao lưu để chuyển. Tiến độ tài khoản đã đồng bộ có thể tải lại khi đăng nhập cùng tài khoản trên website dùng cùng project Supabase.
 
 ## Đăng nhập / đăng ký với Supabase
 
@@ -61,7 +61,9 @@ Các trang: `/login`, `/register`, `/forgot-password`, `/reset-password`, `/auth
 
 Mật khẩu chỉ được gửi đến Supabase Auth qua HTTPS, không lưu trong tiến độ hoặc trình duyệt. Trình duyệt lưu access/refresh token cho phiên đăng nhập; các token này không được đưa vào tệp sao lưu hoặc dữ liệu tiến độ trên database. Chỉ dùng publishable/anon key cho frontend, không dùng secret key, `service_role` hoặc mật khẩu database.
 
-Khi lưu lên tài khoản, ứng dụng kiểm tra mốc cập nhật của bản lưu để phát hiện thay đổi từ thiết bị khác. Khi tải hoặc gộp tiến độ, dữ liệu được kiểm tra trước khi thay thế; tiến độ khách và tài khoản khác không bị thay đổi. SQL migration không tự chạy khi build frontend.
+Sau khi đăng nhập, tiến độ tự tải và tự đồng bộ lên tài khoản trong quá trình học. Ứng dụng giữ bản cục bộ để dùng khi mất mạng và tự thử lại khi kết nối trở lại. Nhãn “Đã đồng bộ” cho biết bản lưu đã được server xác nhận; không cần bấm lưu/tải thủ công. Thao tác gộp tiến độ khách vẫn do bạn chủ động chọn. SQL migration không tự chạy khi build frontend.
+
+Hỗ trợ **Tiếp tục với Google** trên trang đăng nhập/đăng ký qua Supabase Auth với PKCE. Cần bật Google provider và khai báo OAuth Client ID/Secret trong Supabase trước khi dùng. Xem [hướng dẫn Google và tự đồng bộ](supabase/GOOGLE_AUTH.md), gồm cách cấu hình hai callback, xử lý mất mạng, xung đột giữa thiết bị và kiểm tra thực tế. Tài khoản email hiện có cũng được tự đồng bộ.
 
 Tài liệu tham khảo: [Supabase Auth REST API](https://github.com/supabase/auth/blob/master/openapi.yaml), [xác thực bằng mật khẩu](https://supabase.com/docs/guides/auth/passwords), [RLS](https://supabase.com/docs/guides/database/postgres/row-level-security).
 

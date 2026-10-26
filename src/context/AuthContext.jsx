@@ -1,16 +1,24 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AuthContext } from './authContext.js'
 import { authClient } from '../services/auth.js'
-import { setStorageUser } from '../utils/storage.js'
+import { parseProgressBackup, readProgressSnapshot, setStorageUser, writeProgressSnapshot } from '../utils/storage.js'
+import { createProgressSync } from '../services/progressSync.js'
+
+const INITIAL_SYNC = { status: 'loading', ready: false, updatedAt: null }
 
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(() => authClient.configured && authClient.hasStoredSession())
   const [restoreError, setRestoreError] = useState(false)
+  const [syncState, setSyncState] = useState(INITIAL_SYNC)
+  const [progressVersion, setProgressVersion] = useState(0)
+  const syncRef = useRef(null)
+  const userId = session?.user.id
 
   useEffect(() => {
     let active = true
     const unsubscribe = authClient.subscribe((next) => {
+      if (syncRef.current?.userId !== next?.user.id) syncRef.current?.stop()
       setStorageUser(next?.user.id || null)
       setSession(next)
       setRestoreError(false)
@@ -26,5 +34,51 @@ export function AuthProvider({ children }) {
     return () => { active = false; unsubscribe(); clearInterval(timer); window.removeEventListener('storage', storageChanged); window.removeEventListener('focus', refresh) }
   }, [])
 
-  return <AuthContext.Provider value={{ user: session?.user || null, loading, restoreError, configured: authClient.configured, client: authClient }}>{children}</AuthContext.Provider>
+  useEffect(() => {
+    if (!userId) return undefined
+    const baselineKey = `${authClient.storageKey}:sync-base:${encodeURIComponent(userId)}`
+    const prefix = `n3vjit_account:${encodeURIComponent(userId)}:`
+    const controller = createProgressSync({
+      client: { loadProgress: () => authClient.loadProgress(userId), saveProgress: (data, stamp) => authClient.saveProgress(data, stamp, userId) },
+      readLocal: () => readProgressSnapshot(userId),
+      writeLocal: data => writeProgressSnapshot(data, userId, { notify: false }),
+      loadBase: () => {
+        try {
+          const cached = JSON.parse(localStorage.getItem(baselineKey) || 'null')
+          if (!cached || typeof cached !== 'object' || Array.isArray(cached)) return null
+          if (Object.keys(cached).length) parseProgressBackup(JSON.stringify(cached))
+          return cached
+        } catch { return null }
+      },
+      saveBase: data => localStorage.setItem(baselineKey, JSON.stringify(data)),
+      withLock: task => navigator.locks ? navigator.locks.request(`n3vjit-sync:${userId}`, task) : task(),
+      onState: next => setSyncState({ ...next, userId }),
+      onRemoteApplied: () => { setProgressVersion(value => value + 1); window.dispatchEvent(new Event('n3vjit:progress')) },
+    })
+    syncRef.current = { ...controller, userId }
+    const localChanged = event => { if (event.detail?.userId === userId && event.detail.key !== 'n3vjit_theme') controller.changed() }
+    const storageChanged = event => { if (event.key === null || event.key?.startsWith(prefix)) { setProgressVersion(value => value + 1); controller.changed() } }
+    const refresh = () => { if (!document.hidden) controller.syncNow() }
+    const flush = () => controller.syncNow()
+    const poll = setInterval(refresh, 60000)
+    window.addEventListener('n3vjit:progress-write', localChanged)
+    window.addEventListener('storage', storageChanged)
+    window.addEventListener('online', flush)
+    window.addEventListener('focus', refresh)
+    window.addEventListener('pagehide', flush)
+    document.addEventListener('visibilitychange', flush)
+    controller.syncNow()
+    return () => {
+      controller.stop(); syncRef.current = null; clearInterval(poll)
+      window.removeEventListener('n3vjit:progress-write', localChanged)
+      window.removeEventListener('storage', storageChanged)
+      window.removeEventListener('online', flush)
+      window.removeEventListener('focus', refresh)
+      window.removeEventListener('pagehide', flush)
+      document.removeEventListener('visibilitychange', flush)
+    }
+  }, [userId])
+
+  const sync = syncState.userId === userId ? syncState : INITIAL_SYNC
+  return <AuthContext.Provider value={{ user: session?.user || null, loading, restoreError, configured: authClient.configured, client: authClient, sync, syncNow: () => syncRef.current?.syncNow(), progressVersion }}>{children}</AuthContext.Provider>
 }

@@ -1,6 +1,6 @@
 // Supabase Auth REST API: https://github.com/supabase/auth/blob/master/openapi.yaml
 // Passwords are sent only to Supabase and are never written to browser storage.
-export function createAuthClient({ url = '', publicKey = '', storage, fetchImpl = globalThis.fetch, now = () => Date.now() } = {}) {
+export function createAuthClient({ url = '', publicKey = '', storage, oauthStorage, fetchImpl = globalThis.fetch, now = () => Date.now() } = {}) {
   let baseUrl = ''
   try {
     const parsed = new URL(url)
@@ -14,6 +14,7 @@ export function createAuthClient({ url = '', publicKey = '', storage, fetchImpl 
   }
   const configured = Boolean(baseUrl && publicKeyAllowed)
   const storageKey = `n3vjit_auth:${baseUrl}`
+  const oauthKey = `n3vjit_oauth:${baseUrl}`
   let session = null
   let generation = 0
   let refreshPromise = null
@@ -124,7 +125,12 @@ export function createAuthClient({ url = '', publicKey = '', storage, fetchImpl 
         return session
       } catch (failure) {
         if (version !== generation) return session
-        if (failure.code === 'network_error') throw failure
+        if (failure.code === 'network_error') {
+          // Keep the known account's local workspace available offline. Server calls
+          // still require its access token and revalidate/refresh on reconnection.
+          if (session) updateSession(session, false)
+          throw failure
+        }
         updateSession(null)
         return null
       }
@@ -140,6 +146,23 @@ export function createAuthClient({ url = '', publicKey = '', storage, fetchImpl 
     restoreSession,
     syncStorage() { ++generation; restorePromise = null; return restoreSession() },
     refreshIfNeeded() { return session ? validSession() : Promise.resolve(null) },
+    async getGoogleSignInUrl(redirectTo) {
+      if (!configured) throw error('not_configured')
+      let redirect
+      try { redirect = new URL(redirectTo) } catch { throw error('invalid_redirect') }
+      if ((redirect.protocol !== 'https:' && !(redirect.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(redirect.hostname))) || redirect.username || redirect.password || redirect.pathname !== '/auth/callback' || redirect.hash || redirect.search) throw error('invalid_redirect')
+      const settings = await request('/auth/v1/settings')
+      if (settings?.external?.google !== true) throw error('google_not_configured')
+      const verifier = Array.from(crypto.getRandomValues(new Uint8Array(32)), value => value.toString(16).padStart(2, '0')).join('')
+      const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier)))
+      const challenge = btoa(String.fromCharCode(...digest)).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '')
+      try {
+        if (!oauthStorage) throw new Error('unavailable')
+        oauthStorage.setItem(oauthKey, JSON.stringify({ verifier, createdAt: now() }))
+      } catch { throw error('oauth_storage_unavailable') }
+      const params = new URLSearchParams({ provider: 'google', redirect_to: redirect.href, code_challenge: challenge, code_challenge_method: 's256', prompt: 'select_account' })
+      return `${baseUrl}/auth/v1/authorize?${params}`
+    },
     async signIn(email, password) {
       const version = ++generation
       const data = await request('/auth/v1/token?grant_type=password', { method: 'POST', body: { email: email.trim(), password } })
@@ -173,9 +196,28 @@ export function createAuthClient({ url = '', publicKey = '', storage, fetchImpl 
     async setPassword(password) {
       return authorizedRequest('/auth/v1/user', { method: 'PUT', body: { password } })
     },
-    async acceptCallback(hash) {
+    async acceptCallback(hash, search = '') {
       const params = new URLSearchParams(hash.replace(/^#/, ''))
-      if (params.has('error') || params.has('error_code')) throw error(params.get('error_code') || 'otp_expired')
+      const query = new URLSearchParams(search)
+      if (query.has('error') || query.has('error_code')) {
+        try { oauthStorage?.removeItem(oauthKey) } catch { /* No session was created. */ }
+        throw error(query.get('error_code') || (query.get('error') === 'access_denied' ? 'access_denied' : 'oauth_callback_error'))
+      }
+      if (query.has('code')) {
+        let pending
+        try { pending = JSON.parse(oauthStorage?.getItem(oauthKey) || 'null') } catch { /* Reject a callback without its initiating browser. */ }
+        if (!pending?.verifier || !Number.isFinite(pending.createdAt) || now() - pending.createdAt > 600000 || now() < pending.createdAt || params.has('access_token')) throw error('oauth_verifier_missing')
+        const version = ++generation
+        const data = await request('/auth/v1/token?grant_type=pkce', { method: 'POST', body: { auth_code: query.get('code'), code_verifier: pending.verifier } })
+        if (version !== generation) throw error('session_not_found')
+        updateSession(tokenSession(data))
+        try { oauthStorage.removeItem(oauthKey) } catch { /* A consumed code cannot be reused. */ }
+        return { recovery: false }
+      }
+      if (params.has('error') || params.has('error_code')) {
+        try { oauthStorage?.removeItem(oauthKey) } catch { /* No session was created. */ }
+        throw error(params.get('error_code') || (params.get('error') === 'access_denied' ? 'access_denied' : 'otp_expired'))
+      }
       const access_token = params.get('access_token')
       const refresh_token = params.get('refresh_token')
       if (!access_token || !refresh_token) throw error('otp_expired')
@@ -185,8 +227,9 @@ export function createAuthClient({ url = '', publicKey = '', storage, fetchImpl 
       updateSession(tokenSession({ access_token, refresh_token, expires_in: params.get('expires_in') }, user))
       return { recovery: params.get('type') === 'recovery' }
     },
-    async loadProgress() {
+    async loadProgress(expectedUserId = null) {
       const current = await validSession()
+      if (expectedUserId && current.user.id !== expectedUserId) throw error('session_not_found')
       const query = new URLSearchParams({ user_id: `eq.${current.user.id}`, select: 'data,updated_at' })
       const rows = await authorizedRequest(`/rest/v1/n3vjit_study_progress?${query}`)
       return rows?.[0] || null
@@ -200,8 +243,9 @@ export function createAuthClient({ url = '', publicKey = '', storage, fetchImpl 
         p_timezone: settings.timezone, p_weekdays: settings.weekdays,
       } })
     },
-    async saveProgress(data, updatedAt = null) {
+    async saveProgress(data, updatedAt = null, expectedUserId = null) {
       const current = await validSession()
+      if (expectedUserId && current.user.id !== expectedUserId) throw error('session_not_found')
       const query = new URLSearchParams({ user_id: `eq.${current.user.id}` })
       if (updatedAt) query.set('updated_at', `eq.${updatedAt}`)
       const rows = await authorizedRequest(`/rest/v1/n3vjit_study_progress${updatedAt ? `?${query}` : ''}`, {

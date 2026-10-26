@@ -17,8 +17,8 @@ const scopedKey = (key, userId = storageUserId) => key === STORAGE_KEYS.THEME ||
 
 export const setStorageUser = (userId) => { storageUserId = userId || null; };
 
-function notifyProgressWrite() {
-  if (typeof window !== 'undefined') window.dispatchEvent(new Event('n3vjit:progress-write'));
+function notifyProgressWrite(userId = storageUserId, key = null) {
+  if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('n3vjit:progress-write', { detail: { userId, key } }));
 }
 
 // ===== Generic Helpers =====
@@ -36,7 +36,7 @@ const getItem = (key, defaultValue = null) => {
 const setItem = (key, value) => {
   try {
     localStorage.setItem(scopedKey(key), JSON.stringify(value));
-    notifyProgressWrite();
+    notifyProgressWrite(storageUserId, key);
     return true;
   } catch (e) {
     console.error(`Error writing ${key} to localStorage:`, e);
@@ -302,7 +302,7 @@ export const importProgress = (file) => {
         const previous = entries.map(([key]) => [scopedKey(key, targetUserId), localStorage.getItem(scopedKey(key, targetUserId))]);
         try {
           entries.forEach(([key, value]) => localStorage.setItem(scopedKey(key, targetUserId), JSON.stringify(value)));
-          notifyProgressWrite();
+          notifyProgressWrite(targetUserId);
         } catch (error) {
           previous.forEach(([key]) => localStorage.removeItem(key));
           previous.forEach(([key, value]) => {
@@ -340,7 +340,7 @@ export const readProgressSnapshot = (userId = storageUserId) => {
   return snapshot;
 };
 
-export const writeProgressSnapshot = (snapshot, userId = storageUserId) => {
+export const writeProgressSnapshot = (snapshot, userId = storageUserId, { notify = true } = {}) => {
   if (!isRecord(snapshot)) throw new Error('Dữ liệu tiến độ không hợp lệ.');
   const entries = Object.keys(snapshot).length ? parseProgressBackup(JSON.stringify(snapshot)).filter(([key]) => key !== STORAGE_KEYS.THEME) : [];
   const keys = Object.values(STORAGE_KEYS).filter(key => key !== STORAGE_KEYS.THEME).map(key => scopedKey(key, userId));
@@ -353,5 +353,5 @@ export const writeProgressSnapshot = (snapshot, userId = storageUserId) => {
     previous.forEach(([key, value]) => { if (value === null) localStorage.removeItem(key); else localStorage.setItem(key, value); });
     throw error;
   }
-  notifyProgressWrite();
+  if (notify) notifyProgressWrite(userId);
 };

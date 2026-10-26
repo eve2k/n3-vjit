@@ -3,8 +3,10 @@ import { ArrowLeft, ArrowRight, CheckCircle2, Layers, RotateCcw } from 'lucide-r
 import { flashcardDecks } from '../data/index.js'
 import SpeakButton from './SpeakButton.jsx'
 import { getMasteredFlashcards, toggleFlashcardMastered } from '../utils/storage.js'
+import { useAuth } from '../context/authContext.js'
 
 export default function FlashcardView() {
+  useAuth()
   const decks = Object.values(flashcardDecks)
   const [deckId, setDeckId] = useState('deck1')
   const [position, setPosition] = useState(0)

@@ -65,16 +65,26 @@ export default function AuthPage({ mode = 'login' }) {
     finally { setBusy(false) }
   }
 
+  const googleSignIn = async () => {
+    if (busy) return
+    setBusy(true); setNotice(null)
+    try {
+      const url = await client.getGoogleSignInUrl(new URL('/auth/callback', window.location.origin).href)
+      window.location.assign(url)
+    } catch (error) { setNotice({ text: authErrorMessage(error), error: true }); setBusy(false) }
+  }
+
   if (user && ['login', 'register'].includes(mode)) return <Navigate to="/account" replace />
 
   return <div className="page-shell auth-page">
-    <aside className="auth-story"><span className="auth-story-icon"><GraduationCap size={30} aria-hidden="true" /></span><p className="eyebrow">HỌC ĐỀU MỖI NGÀY</p><h1>Mỗi lần quay lại,<br />một bước gần N3 hơn.</h1><p>Từ những câu hỏi đầu tiên đến lúc tự tin làm đề — giữ lại hành trình học theo cách của bạn.</p><div className="auth-benefit"><CheckCircle2 size={19} aria-hidden="true" /><span>Tiến độ riêng cho từng tài khoản</span></div><div className="auth-benefit"><ShieldCheck size={19} aria-hidden="true" /><span>Chủ động lưu và khôi phục tiến độ</span></div><div className="auth-benefit"><BookOpen size={19} aria-hidden="true" /><span>Vẫn có thể học ngay với chế độ khách</span></div><Link to="/" className="text-link"><ArrowLeft size={16} aria-hidden="true" />Tiếp tục học với chế độ khách</Link></aside>
+    <aside className="auth-story"><span className="auth-story-icon"><GraduationCap size={30} aria-hidden="true" /></span><p className="eyebrow">HỌC ĐỀU MỖI NGÀY</p><h1>Mỗi lần quay lại,<br />một bước gần N3 hơn.</h1><p>Từ những câu hỏi đầu tiên đến lúc tự tin làm đề — giữ lại hành trình học theo cách của bạn.</p><div className="auth-benefit"><CheckCircle2 size={19} aria-hidden="true" /><span>Tiến độ riêng cho từng tài khoản</span></div><div className="auth-benefit"><ShieldCheck size={19} aria-hidden="true" /><span>Tự đồng bộ để học tiếp trên thiết bị khác</span></div><div className="auth-benefit"><BookOpen size={19} aria-hidden="true" /><span>Vẫn có thể học ngay với chế độ khách</span></div><Link to="/" className="text-link"><ArrowLeft size={16} aria-hidden="true" />Tiếp tục học với chế độ khách</Link></aside>
     <section className="panel auth-form-panel" aria-labelledby="auth-form-heading">
       {['login', 'register'].includes(mode) && <nav className="auth-form-tabs" aria-label="Tài khoản"><Link to="/login" className={mode === 'login' ? 'is-active' : ''}>Đăng nhập</Link><Link to="/register" className={mode === 'register' ? 'is-active' : ''}>Đăng ký</Link></nav>}
       <h2 id="auth-form-heading">{copy.title}</h2><p className="auth-description">{copy.description}</p>
       {!configured && <p className="notice notice-error" role="status">Đăng nhập chưa sẵn sàng. Bạn vẫn có thể học với chế độ khách.</p>}
       {restoreError && <p className="notice notice-error" role="status">Chưa khôi phục được phiên đăng nhập trước. Hãy kiểm tra mạng hoặc đăng nhập lại.</p>}
       {notice && <p className={`notice ${notice.error ? 'notice-error' : 'notice-success'}`} role={notice.error ? 'alert' : 'status'}>{notice.text}</p>}
+      {['login', 'register'].includes(mode) && <><button type="button" className="btn btn-secondary auth-google" disabled={busy || !configured} onClick={googleSignIn}><span aria-hidden="true" className="google-mark">G</span>Tiếp tục với Google</button><div className="auth-divider"><span>hoặc dùng email</span></div></>}
       {mode === 'reset' && !user ? <div className="empty-state"><p>Hãy mở liên kết đặt lại mật khẩu trong email để tiếp tục.</p><Link to="/forgot-password" className="btn btn-primary">Yêu cầu liên kết mới</Link></div> : <form onSubmit={submit} noValidate aria-busy={busy}>
         {mode === 'register' && <AuthField name="name" label="Tên hiển thị" autoComplete="name" maxLength={80} value={fields.name} error={errors.name} disabled={busy} onChange={change} />}
         {mode !== 'reset' && <AuthField name="email" label="Email" type="email" autoComplete="username" maxLength={254} value={fields.email} error={errors.email} disabled={busy} onChange={change} />}
