@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight, BookOpen, CheckCircle2, Clock3, Headphones, PenL
 import { getQuizHistory } from '../utils/storage.js'
 import { formatDuration, gradeExam } from '../utils/learning.js'
 import { createMockExam, EXAM_MAX_SCORE, EXAM_PASS_SCORE, gradeMockExam, MOCK_EXAM_PARTS, parseManualScore, restoreMockExam, saveMockExamAttempt } from '../utils/mockExam.js'
+import useQuestionShortcuts from '../hooks/useQuestionShortcuts.js'
 
 const STATUS_LABELS = { passed: 'Đạt', failed: 'Không đạt', pending: 'Chờ chấm', excluded: 'Không tính điểm' }
 const PART_ICONS = { reading: BookOpen, passages: BookOpen, listening: Headphones, writing: PenLine }
@@ -22,6 +23,7 @@ export default function MockExam() {
   const [activePart, setActivePart] = useState('reading')
   const [questionIndex, setQuestionIndex] = useState(0)
   const [passageIndex, setPassageIndex] = useState(0)
+  const [passageQuestionIndex, setPassageQuestionIndex] = useState(0)
   const [listeningIndex, setListeningIndex] = useState(0)
   const [answers, setAnswers] = useState(initial.saved?.answers || {})
   const [writingText, setWritingText] = useState(initial.saved?.writingText || '')
@@ -37,6 +39,8 @@ export default function MockExam() {
   const result = gradeMockExam(exam, answers, manualScores)
   const reviewed = phase === 'results'
   const selectedPassage = exam.passages[passageIndex]
+  const activeQuestion = activePart === 'reading' ? exam.reading[questionIndex] : activePart === 'passages' ? selectedPassage.questions[passageQuestionIndex] : activePart === 'listening' ? exam.listening[listeningIndex] : null
+  const activeQuestionId = activeQuestion?.id
   const missingListeningKeys = exam.listening.filter((question) => !Object.hasOwn(question.options, question.correctAnswer)).length
 
   useEffect(() => {
@@ -56,6 +60,35 @@ export default function MockExam() {
   const choose = (question, letter) => {
     if (phase === 'taking') setAnswers((previous) => ({ ...previous, [question.id]: letter }))
   }
+
+  const advanceQuestion = () => {
+    if (activePart === 'reading') {
+      if (questionIndex < exam.reading.length - 1) setQuestionIndex(questionIndex + 1)
+      else { setActivePart('passages'); setPassageIndex(0); setPassageQuestionIndex(0) }
+    } else if (activePart === 'passages') {
+      if (passageQuestionIndex < selectedPassage.questions.length - 1) setPassageQuestionIndex(passageQuestionIndex + 1)
+      else if (passageIndex < exam.passages.length - 1) { setPassageIndex(passageIndex + 1); setPassageQuestionIndex(0) }
+      else { setActivePart('listening'); setListeningIndex(0) }
+    } else if (activePart === 'listening') {
+      if (listeningIndex < exam.listening.length - 1) setListeningIndex(listeningIndex + 1)
+      else setActivePart('writing')
+    }
+  }
+
+  const { pendingChoice, clearPending } = useQuestionShortcuts({
+    question: activeQuestion,
+    answer: activeQuestion ? answers[activeQuestion.id] : null,
+    disabled: phase !== 'taking' || activePart === 'writing',
+    scope: exam.id,
+    onAnswer: (letter) => choose(activeQuestion, letter),
+    onNext: advanceQuestion,
+  })
+
+  const answerQuestion = (question, letter) => { clearPending(); choose(question, letter) }
+
+  useEffect(() => {
+    if (phase === 'taking' && activeQuestionId) document.getElementById(`exam-question-${activeQuestionId}`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+  }, [activeQuestionId, phase])
 
   const start = () => {
     setStartedAt(Date.now())
@@ -100,7 +133,7 @@ export default function MockExam() {
     if (searchParams.has('attempt')) { navigate('/exam', { replace: true }); return }
     setExam(createMockExam())
     setAnswers({}); setWritingText(''); setManualScores({}); setScoreInputs({})
-    setActivePart('reading'); setQuestionIndex(0); setPassageIndex(0); setListeningIndex(0)
+    setActivePart('reading'); setQuestionIndex(0); setPassageIndex(0); setPassageQuestionIndex(0); setListeningIndex(0)
     setElapsed(0); setNotice(null); setAudioFile(null); setPhase('setup')
   }
 
@@ -126,10 +159,10 @@ export default function MockExam() {
 
         <div className="mock-exam-toolbar"><nav className="mock-part-tabs" aria-label="Chọn phần thi">{MOCK_EXAM_PARTS.map((part, index) => <button key={part.id} type="button" aria-pressed={activePart === part.id} className={activePart === part.id ? 'is-active' : ''} onClick={() => setActivePart(part.id)}><span>{index + 1}</span>{part.label}</button>)}</nav><span className="quiz-clock" role="timer" aria-label="Thời gian làm bài"><Clock3 size={18} aria-hidden="true" />{formatDuration(elapsed)}</span></div>
 
-        <div className="mock-exam-layout"><div className="min-w-0">
-          {activePart === 'reading' && <><ExamQuestion question={exam.reading[questionIndex]} number={questionIndex + 1} total={35} answers={answers} reviewed={reviewed} choose={choose} /><QuestionNavigation index={questionIndex} total={35} onChange={setQuestionIndex} /><QuestionMap questions={exam.reading} answers={answers} currentIndex={questionIndex} onChange={setQuestionIndex} /></>}
-          {activePart === 'passages' && <><div className="flex flex-wrap gap-2 mb-4">{exam.passages.map((passage, index) => <button type="button" key={passage.id} className={`btn ${passageIndex === index ? 'btn-primary' : 'btn-secondary'}`} aria-pressed={passageIndex === index} onClick={() => setPassageIndex(index)}>Bài {index + 1} · {passage.questions.length} câu</button>)}</div><article className="panel exam-passage"><p className="eyebrow">BÀI ĐỌC VĂN {passageIndex + 1}/2</p><h2 className="jp">{selectedPassage.title}</h2><p className="jp whitespace-pre-wrap">{selectedPassage.passage}</p></article><div className="space-y-4 mt-5">{selectedPassage.questions.map((question, index) => <ExamQuestion key={question.id} question={question} number={index + 1} total={selectedPassage.questions.length} answers={answers} reviewed={reviewed} choose={choose} />)}</div></>}
-          {activePart === 'listening' && <><section className="panel exam-listening-note"><h2><Headphones size={19} aria-hidden="true" />Phần nghe · 30 câu</h2><p>Đề hiện chưa kèm âm thanh và còn {missingListeningKeys} câu thiếu đáp án. Các lựa chọn được giữ để làm bài; điểm toàn phần cần nhập sau khi được chấm.</p>{renderAudio()}</section><ExamQuestion question={exam.listening[listeningIndex]} number={listeningIndex + 1} total={30} answers={answers} reviewed={reviewed} choose={choose} /><QuestionNavigation index={listeningIndex} total={30} onChange={setListeningIndex} /><QuestionMap questions={exam.listening} answers={answers} currentIndex={listeningIndex} onChange={setListeningIndex} /></>}
+        {phase === 'taking' && activeQuestion && <p className="keyboard-hint mb-4" aria-live="polite">{pendingChoice ? `Đang chọn ${pendingChoice} · Space để trả lời` : '1 / 2 / 3 / 4 chọn đáp án · Space để trả lời, nhấn tiếp để chuyển câu'}</p>}<div className="mock-exam-layout"><div className="min-w-0">
+          {activePart === 'reading' && <><ExamQuestion question={exam.reading[questionIndex]} pendingChoice={pendingChoice} number={questionIndex + 1} total={35} answers={answers} reviewed={reviewed} choose={answerQuestion} /><QuestionNavigation index={questionIndex} total={35} onChange={setQuestionIndex} /><QuestionMap questions={exam.reading} answers={answers} currentIndex={questionIndex} onChange={setQuestionIndex} /></>}
+          {activePart === 'passages' && <><div className="flex flex-wrap gap-2 mb-4">{exam.passages.map((passage, index) => <button type="button" key={passage.id} className={`btn ${passageIndex === index ? 'btn-primary' : 'btn-secondary'}`} aria-pressed={passageIndex === index} onClick={() => { setPassageIndex(index); setPassageQuestionIndex(0) }}>Bài {index + 1} · {passage.questions.length} câu</button>)}</div><article className="panel exam-passage"><p className="eyebrow">BÀI ĐỌC VĂN {passageIndex + 1}/2</p><h2 className="jp">{selectedPassage.title}</h2><p className="jp whitespace-pre-wrap">{selectedPassage.passage}</p></article><div className="space-y-4 mt-5">{selectedPassage.questions.map((question, index) => <ExamQuestion key={question.id} question={question} active={passageQuestionIndex === index} onActivate={() => setPassageQuestionIndex(index)} pendingChoice={passageQuestionIndex === index ? pendingChoice : null} number={index + 1} total={selectedPassage.questions.length} answers={answers} reviewed={reviewed} choose={answerQuestion} />)}</div></>}
+          {activePart === 'listening' && <><section className="panel exam-listening-note"><h2><Headphones size={19} aria-hidden="true" />Phần nghe · 30 câu</h2><p>Đề hiện chưa kèm âm thanh và còn {missingListeningKeys} câu thiếu đáp án. Các lựa chọn được giữ để làm bài; điểm toàn phần cần nhập sau khi được chấm.</p>{renderAudio()}</section><ExamQuestion question={exam.listening[listeningIndex]} pendingChoice={pendingChoice} number={listeningIndex + 1} total={30} answers={answers} reviewed={reviewed} choose={answerQuestion} /><QuestionNavigation index={listeningIndex} total={30} onChange={setListeningIndex} /><QuestionMap questions={exam.listening} answers={answers} currentIndex={listeningIndex} onChange={setListeningIndex} /></>}
           {activePart === 'writing' && <section className="panel exam-writing"><p className="eyebrow">PHẦN VIẾT · 1 BÀI · KHÔNG TÍNH ĐIỂM</p><h2 className="jp">{exam.writing.title}</h2><p className="text-[var(--muted)]">{exam.writing.titleVi}</p><details className="writing-prompts"><summary>Các ý cần triển khai trong bài viết</summary><ol>{exam.writing.prompts.map((prompt) => <li key={prompt.q} className="jp">{prompt.q}</li>)}</ol></details><label htmlFor="exam-writing-text">Bài viết tiếng Nhật của bạn</label><textarea id="exam-writing-text" className="jp" value={writingText} readOnly={reviewed} onChange={(event) => setWritingText(event.target.value)} placeholder="Viết bài tại đây…" /><p className="text-sm text-[var(--muted)] mt-2">{[...writingText].length} ký tự · {reviewed ? 'Bài đã được lưu. Phần viết không tính điểm.' : 'Bài viết được lưu khi bạn nộp toàn bộ bài thi.'}</p>{reviewed && <details className="writing-prompts"><summary>Đối chiếu bài mẫu sau khi thi</summary><p className="jp whitespace-pre-wrap">{exam.writing.sample}</p></details>}</section>}
         </div>
 
@@ -143,11 +176,11 @@ export default function MockExam() {
   )
 }
 
-function ExamQuestion({ question, number, total, answers, reviewed, choose }) {
+function ExamQuestion({ question, number, total, answers, reviewed, choose, pendingChoice, active = false, onActivate }) {
   const pick = answers[question.id]
   const known = Object.hasOwn(question.options, question.correctAnswer)
-  return <section className="panel question-card"><div className="question-meta"><span>Câu {number}/{total}</span>{reviewed && known && <span>{!pick ? 'Chưa trả lời' : String(pick) === String(question.correctAnswer) ? 'Đúng' : 'Sai'}</span>}</div>{question.image && <img src={question.image} alt={`Hình minh họa câu ${number}`} className="mb-5 max-h-64 rounded-lg object-contain" />}<h3 className="jp question-text">{question.questionText}</h3><div className="answer-list">{Object.entries(question.options).map(([letter, text]) => {
-    const selected = pick === letter
+  return <section id={`exam-question-${question.id}`} className={`panel question-card ${active ? 'shortcut-active' : ''}`} onFocus={onActivate} onPointerDown={onActivate}><div className="question-meta"><span>Câu {number}/{total}</span>{reviewed && known && <span>{!pick ? 'Chưa trả lời' : String(pick) === String(question.correctAnswer) ? 'Đúng' : 'Sai'}</span>}</div>{question.image && <img src={question.image} alt={`Hình minh họa câu ${number}`} className="mb-5 max-h-64 rounded-lg object-contain" />}<h3 className="jp question-text">{question.questionText}</h3><div className="answer-list">{Object.entries(question.options).map(([letter, text]) => {
+    const selected = (pendingChoice || pick) === letter
     let state = selected ? 'is-selected' : ''
     if (reviewed && known) {
       if (String(letter) === String(question.correctAnswer)) state = 'is-correct'

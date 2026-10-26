@@ -43,6 +43,7 @@ Repository chỉ cần mã nguồn, tài nguyên trong `public/`, cấu hình v�
 - Câu bỏ trống không được đánh dấu là đã hoàn thành; kết quả thi lưu cả thời gian làm bài.
 - Sổ tay câu sai hỗ trợ câu trắc nghiệm, đọc hiểu và các câu nghe có đáp án. Trả lời đúng trong 2 lượt ôn để bỏ câu khỏi sổ tay.
 - Flashcard có bộ lọc thẻ chưa thuộc; chuyển thẻ sẽ trở về mặt câu hỏi.
+- Luyện câu hỏi, đọc hiểu, nghe và thi thử hỗ trợ phím 1–4 chọn đáp án theo thứ tự A–D (hoặc 1–4); Space xác nhận, Space lần nữa chuyển câu. Phím tắt không hoạt động khi nhập văn bản/điểm hoặc dùng nút điều khiển khác. Flashcard giữ Space để lật thẻ.
 - Dữ liệu lưu trong `localStorage` của trình duyệt, chưa có tài khoản hay đồng bộ giữa các thiết bị.
 - Dùng **Sao lưu** trên trang tổng quan để tải tệp JSON. **Khôi phục** hỗ trợ cả bản sao lưu cũ và định dạng có phiên bản mới, kiểm tra dữ liệu trước khi ghi. Các mục có trong tệp sẽ thay thế dữ liệu tương ứng trên máy.
 - Dữ liệu của `localhost` và tên miền công khai được lưu riêng. Hãy xuất tệp sao lưu rồi nhập trên tên miền mới khi chuyển sang website đã triển khai.

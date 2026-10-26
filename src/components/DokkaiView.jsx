@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { dokkai } from '../data/index.js'
 import SpeakButton from './SpeakButton.jsx'
 import { markDokkaiCompleted, markQuestionCompleted, addWrongQuestion, markWrongQuestionCorrect } from '../utils/storage'
+import useQuestionShortcuts from '../hooks/useQuestionShortcuts.js'
 
 function fillPassage(passage, answersByBlank) {
   let text = passage
@@ -22,6 +23,8 @@ export default function DokkaiView() {
   const [n, setN] = useState(1)
   const passage = dokkai.find((p) => p.number === n) || dokkai[0]
   const [picks, setPicks] = useState({})
+  const [activeIndex, setActiveIndex] = useState(0)
+  const activeQuestion = passage.questions[activeIndex]
 
   const filled = useMemo(() => {
     const blanks = {}
@@ -45,6 +48,18 @@ export default function DokkaiView() {
     if (done) markDokkaiCompleted(passage.id)
   }
 
+  const { pendingChoice, clearPending } = useQuestionShortcuts({
+    question: activeQuestion,
+    answer: picks[activeQuestion?.id],
+    locked: Boolean(picks[activeQuestion?.id]),
+    onAnswer: (letter) => choose(activeQuestion, letter),
+    onNext: () => {
+      const next = Math.min(passage.questions.length - 1, activeIndex + 1)
+      setActiveIndex(next)
+      document.getElementById(`dokkai-question-${passage.questions[next].id}`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+    },
+  })
+
   return (
     <div className="mx-auto max-w-6xl p-4 pb-24">
       <div className="mb-3 flex flex-wrap gap-2">
@@ -55,6 +70,8 @@ export default function DokkaiView() {
             onClick={() => {
               setN(p.number)
               setPicks({})
+              setActiveIndex(0)
+              clearPending()
             }}
             className={`rounded border px-2 py-1 text-sm ${n === p.number ? 'bg-[var(--accent)] text-[var(--accent-ink)]' : 'border-[var(--line)]'}`}
           >
@@ -65,6 +82,7 @@ export default function DokkaiView() {
       <h1 className="mb-3 text-xl font-semibold">
         読解 ({passage.number}) · {passage.title}
       </h1>
+      <p className="keyboard-hint mb-4" aria-live="polite">Câu đang chọn: {activeIndex + 1} · {pendingChoice ? `Đáp án ${pendingChoice} · Space để trả lời` : '1–4 chọn đáp án · Space trả lời / chuyển câu'}</p>
       <div className="grid gap-4 lg:grid-cols-2">
         <article className="h-fit rounded-lg border border-[var(--line)] bg-[var(--card)] p-4 lg:sticky lg:top-24">
           <div className="mb-2 flex justify-end">
@@ -73,10 +91,10 @@ export default function DokkaiView() {
           <p className="jp whitespace-pre-wrap text-[15px] leading-8">{filled}</p>
         </article>
         <div className="space-y-3">
-          {passage.questions.map((q) => {
+          {passage.questions.map((q, index) => {
             const pick = picks[q.id]
             return (
-              <div key={q.id} className="rounded-lg border border-[var(--line)] bg-[var(--card)] p-3">
+              <div key={q.id} id={`dokkai-question-${q.id}`} onFocus={() => setActiveIndex(index)} onPointerDown={() => setActiveIndex(index)} className={`rounded-lg border border-[var(--line)] bg-[var(--card)] p-3 ${activeIndex === index ? 'shortcut-active' : ''}`}>
                 <div className="mb-2 flex justify-between gap-2">
                   <p className="jp font-medium">
                     問{q.questionNumber}. {q.questionText}
@@ -86,6 +104,7 @@ export default function DokkaiView() {
                 <div className="grid gap-1">
                   {Object.entries(q.options).map(([letter, text]) => {
                     let cls = 'border-[var(--line)]'
+                    if (!pick && activeIndex === index && pendingChoice === letter) cls = 'border-[var(--accent)] bg-[var(--accent-soft)]'
                     if (pick) {
                       if (letter === q.correctAnswer) cls = 'border-[var(--ok)] bg-green-500/10'
                       else if (pick === letter) cls = 'border-[var(--bad)] bg-red-500/10'
@@ -95,8 +114,9 @@ export default function DokkaiView() {
                         key={letter}
                         type="button"
                         disabled={Boolean(pick)}
-                        className={`rounded border px-2 py-1 text-left text-sm jp ${cls}`}
-                        onClick={() => choose(q, letter)}
+                        className={`answer-option rounded border px-2 py-1 text-left text-sm jp ${cls}`}
+                        aria-pressed={(activeIndex === index ? pendingChoice || pick : pick) === letter}
+                        onClick={() => { clearPending(); choose(q, letter) }}
                       >
                         {letter}. {text}
                       </button>

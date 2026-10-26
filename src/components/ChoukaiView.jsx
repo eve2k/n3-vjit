@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { choukai } from '../data/index.js'
 import SpeakButton from './SpeakButton.jsx'
 import { addWrongQuestion, markQuestionCompleted, markWrongQuestionCorrect } from '../utils/storage'
+import useQuestionShortcuts from '../hooks/useQuestionShortcuts.js'
 
 const groups = [
   { key: 'mondai1', title: '問題1 · 19 câu (có hình)' },
@@ -14,7 +15,9 @@ const groups = [
 export default function ChoukaiView() {
   const [group, setGroup] = useState('mondai4')
   const [picks, setPicks] = useState({})
+  const [activeIndex, setActiveIndex] = useState(0)
   const items = choukai[group]
+  const activeQuestion = items?.[activeIndex]
 
   const choose = (q, letter) => {
     if (picks[q.id]) return
@@ -25,6 +28,18 @@ export default function ChoukaiView() {
     if (String(letter) === String(q.correctAnswer)) markWrongQuestionCorrect(section, q.id)
     else addWrongQuestion(section, q.id)
   }
+
+  const { pendingChoice, clearPending } = useQuestionShortcuts({
+    question: activeQuestion,
+    answer: picks[activeQuestion?.id],
+    locked: Boolean(picks[activeQuestion?.id]),
+    onAnswer: (letter) => choose(activeQuestion, letter),
+    onNext: () => {
+      const next = Math.min(items.length - 1, activeIndex + 1)
+      setActiveIndex(next)
+      document.getElementById(`choukai-question-${items[next].id}`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+    },
+  })
 
   return (
     <div className="mx-auto max-w-3xl p-4 pb-24">
@@ -38,17 +53,18 @@ export default function ChoukaiView() {
             key={g.key}
             type="button"
             className={`rounded border px-2 py-1 text-sm ${group === g.key ? 'bg-[var(--accent)] text-[var(--accent-ink)]' : 'border-[var(--line)]'}`}
-            onClick={() => setGroup(g.key)}
+            onClick={() => { setGroup(g.key); setActiveIndex(0); clearPending() }}
           >
             {g.title}
           </button>
         ))}
       </div>
+      <p className="keyboard-hint mb-4" aria-live="polite">Câu đang chọn: {activeIndex + 1} · {pendingChoice ? `Đáp án ${pendingChoice} · Space để trả lời` : '1–4 chọn đáp án · Space trả lời / chuyển câu'}</p>
       <div className="space-y-3">
-        {(items || []).map((q) => {
+        {(items || []).map((q, index) => {
           const pick = picks[q.id]
           return (
-            <div key={q.id} className="rounded-lg border border-[var(--line)] bg-[var(--card)] p-3">
+            <div key={q.id} id={`choukai-question-${q.id}`} onFocus={() => setActiveIndex(index)} onPointerDown={() => setActiveIndex(index)} className={`rounded-lg border border-[var(--line)] bg-[var(--card)] p-3 ${activeIndex === index ? 'shortcut-active' : ''}`}>
               <div className="mb-2 flex justify-between gap-2">
                 <p className="font-medium">
                   {q.n ? `${q.n}ばん` : `${q.questionNumber}ばん`}
@@ -64,6 +80,7 @@ export default function ChoukaiView() {
               <div className="grid gap-1">
                 {Object.entries(q.options || {}).map(([letter, text]) => {
                   let cls = 'border-[var(--line)]'
+                  if (!pick && activeIndex === index && pendingChoice === letter) cls = 'border-[var(--accent)] bg-[var(--accent-soft)]'
                   if (pick && q.correctAnswer) {
                     if (String(letter) === String(q.correctAnswer)) cls = 'border-[var(--ok)] bg-green-500/10'
                     else if (pick === letter) cls = 'border-[var(--bad)] bg-red-500/10'
@@ -73,8 +90,9 @@ export default function ChoukaiView() {
                       key={letter}
                       type="button"
                       disabled={Boolean(pick)}
-                      className={`rounded border px-2 py-1 text-left text-sm jp ${cls}`}
-                      onClick={() => choose(q, letter)}
+                      className={`answer-option rounded border px-2 py-1 text-left text-sm jp ${cls}`}
+                      aria-pressed={(activeIndex === index ? pendingChoice || pick : pick) === letter}
+                      onClick={() => { clearPending(); choose(q, letter) }}
                     >
                       {letter}. {text}
                     </button>

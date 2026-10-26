@@ -5,6 +5,7 @@ import { quizSections } from '../data/index.js'
 import SpeakButton from './SpeakButton.jsx'
 import { addWrongQuestion, getWrongQuestions, markQuestionCompleted, markWrongQuestionCorrect, saveLastLesson } from '../utils/storage.js'
 import { getMistakeQuestions, gradeExam } from '../utils/learning.js'
+import useQuestionShortcuts from '../hooks/useQuestionShortcuts.js'
 
 function shuffle(list) {
   const arr = [...list]
@@ -42,6 +43,7 @@ export default function QuizEngine({ mistakeMode = false }) {
   }, [mode, sectionId, currentQuestionId])
 
   const resetSession = (nextMode = mode, nextSection = sectionId, nextShuffle = shuffleOn) => {
+    clearPending()
     if (nextMode === 'exam') { navigate('/exam'); return }
     setMode(nextMode)
     setSectionId(nextSection)
@@ -58,6 +60,14 @@ export default function QuizEngine({ mistakeMode = false }) {
     if (String(letter) === String(q.correctAnswer)) markWrongQuestionCorrect(q.section, q.id)
     else addWrongQuestion(q.section, q.id)
   }
+
+  const { pendingChoice, confirm, clearPending } = useQuestionShortcuts({
+    question: q,
+    answer: currentPick,
+    locked: Boolean(currentPick),
+    onAnswer: select,
+    onNext: () => setIndex((value) => Math.min(questions.length - 1, value + 1)),
+  })
 
   return (
     <div className="page-shell quiz-page">
@@ -85,16 +95,17 @@ export default function QuizEngine({ mistakeMode = false }) {
               <h2 id="question-heading" className="jp question-text">{q.questionText}</h2>
               <div className="answer-list">
                 {Object.entries(q.options).map(([letter, text]) => {
-                  const chosen = currentPick === letter
+                  const chosen = (pendingChoice || currentPick) === letter
                   const correctOption = String(letter) === String(q.correctAnswer)
                   let state = chosen ? 'is-selected' : ''
                   if (currentPick) {
                     if (correctOption) state = 'is-correct'
                     else if (chosen) state = 'is-wrong'
                   }
-                  return <button key={letter} type="button" aria-pressed={chosen} disabled={Boolean(currentPick)} onClick={() => select(letter)} className={`answer-option ${state}`}><span className="answer-letter">{letter}</span><span className="jp flex-1">{text}</span>{state === 'is-correct' && <CheckCircle2 size={19} aria-label="Đáp án đúng" />}</button>
+                  return <button key={letter} type="button" aria-pressed={chosen} disabled={Boolean(currentPick)} onClick={() => confirm(letter)} className={`answer-option ${state}`}><span className="answer-letter">{letter}</span><span className="jp flex-1">{text}</span>{state === 'is-correct' && <CheckCircle2 size={19} aria-label="Đáp án đúng" />}</button>
                 })}
               </div>
+              <p className="keyboard-hint" aria-live="polite">{pendingChoice ? `Đang chọn ${pendingChoice} · Nhấn Space để trả lời` : currentPick ? 'Space để sang câu tiếp' : '1 / 2 / 3 / 4 chọn A / B / C / D · Space để trả lời'}</p>
               {currentPick && <div className={`answer-feedback ${isCorrect ? 'feedback-correct' : 'feedback-wrong'}`} role="status"><strong>{isCorrect ? 'Chính xác!' : `Chưa đúng. Đáp án là ${q.correctAnswer}.`}</strong>{q.keyTakeaway && <p className="font-semibold">{q.keyTakeaway}</p>}{q.explanation && <p>{q.explanation}</p>}</div>}
             </section>
             <div className="quiz-navigation"><button type="button" className="btn btn-secondary" disabled={index === 0} onClick={() => setIndex((value) => value - 1)}><ArrowLeft size={16} aria-hidden="true" />Câu trước</button><span>{index + 1} / {questions.length}</span><button type="button" className="btn btn-primary" disabled={index === questions.length - 1} onClick={() => setIndex((value) => value + 1)}>Câu tiếp<ArrowRight size={16} aria-hidden="true" /></button></div>

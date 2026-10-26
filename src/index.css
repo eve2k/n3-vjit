@@ -263,6 +263,7 @@ input, select, textarea { accent-color: var(--accent); }
 .flashcard-flip-hint { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; }
 .flashcard-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px; margin: 20px 0 28px; }
 .keyboard-hint { margin-top: 24px; text-align: center; font-size: 11px; color: var(--muted); }
+.shortcut-active { outline: 2px solid var(--accent); outline-offset: 3px; scroll-margin-top: 150px; }
 
 .mock-exam-overview { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-bottom: 24px; }
 .exam-part-preview { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 22px; }
