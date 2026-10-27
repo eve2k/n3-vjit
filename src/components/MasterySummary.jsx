@@ -4,7 +4,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowRight, Award, RotateCcw } from 'lucide-react'
 import { useAuth } from '../context/authContext.js'
 import { findLesson, lessonQuestions, nodeId } from '../utils/roadmapContent.js'
-import { cardKey, createRound, LEVEL_LABELS, roundChanges, roundSummarySituation } from '../utils/masteryLearning.js'
+import { cardKey, currentRoundSituation, enterNodeRound, LEVEL_LABELS, roundChanges } from '../utils/masteryLearning.js'
 import { getMasteryProgress, saveMasteryProgress } from '../utils/storage.js'
 import useStudyShortcuts from '../hooks/useStudyShortcuts.js'
 
@@ -20,9 +20,9 @@ export default function MasterySummary() {
   const sessionKey = `${stageId}:${currentId}`
   const session = progress.nodes[sessionKey]
   const snapshot = session?.summary
-  const levels = snapshot?.endLevels || Object.fromEntries((lesson?.questions || []).map(q => [cardKey(q), progress.cards[cardKey(q)]?.level ?? 0]))
+  const keys = (lesson?.questions || []).map(cardKey)
   const lastNode = lesson ? lesson.index === lesson.stage.lessons.length - 1 : false
-  const situation = roundSummarySituation(levels, session?.completedRounds || 0, lastNode)
+  const situation = currentRoundSituation(keys, progress.cards, session?.completedRounds || 0, lastNode, snapshot)
   const changes = roundChanges(snapshot)
   let acknowledged = false
   try {
@@ -36,10 +36,12 @@ export default function MasterySummary() {
   const nextTitle = lastNode ? 'Kiểm tra chặng' : lesson?.stage.lessons[lesson.index + 1]
   const startNextRound = () => {
     if (!lesson || !session || situation.mastered) return
-    const keys = lesson.questions.map(cardKey)
     const oldKeys = lesson.stage.lessons.slice(0, lesson.index).flatMap((_, index) => lessonQuestions(lesson.stage, index).map(cardKey))
-    const next = createRound(keys, oldKeys, progress.cards, session.round + 1, session.completedRounds, Date.now(), updateId())
-    try { saveMasteryProgress({ ...progress, nodes: { ...progress.nodes, [sessionKey]: next } }); navigate(`/study/${stageId}/${currentId}/learn`) } catch (e) { setError(e.message) }
+    const entry = enterNodeRound(keys, oldKeys, progress.cards, session, Date.now(), updateId())
+    try {
+      if (entry.action === 'review' || entry.action === 'start') saveMasteryProgress({ ...progress, nodes: { ...progress.nodes, [sessionKey]: entry.session } })
+      navigate(`/study/${stageId}/${currentId}/${entry.action === 'summary' ? 'summary' : 'learn'}`)
+    } catch (e) { setError(e.message) }
   }
   const primaryAction = () => {
     if (!primaryEnabled) return
@@ -63,6 +65,7 @@ export default function MasterySummary() {
     <div className="summary-level-bar" role="img" aria-label={LEVEL_LABELS.map((label, index) => `${label}: ${situation.counts[index]}`).join(', ')}>{situation.counts.map((count, index) => <span key={index} style={{ width: `${situation.total ? count / situation.total * 100 : 0}%`, background: `var(--mastery-${index})` }}/>)}</div>
     <div className="summary-level-legend">{situation.counts.map((count, index) => <span key={index}><i style={{ background: `var(--mastery-${index})` }}/>{LEVEL_LABELS[index]}: {count}</span>)}</div>
     <p>{changes ? `${changes.up} thẻ lên bậc · ${changes.down} thẻ bị lùi` : 'Vòng cũ chưa lưu ảnh chụp đầu vòng nên không thể tính số thẻ lên hoặc lùi.'}</p>
+    {situation.changedSinceRound && <p className="summary-sync">Bậc hiện tại đã thay đổi sau bài kiểm tra. Có thẻ bị lùi và cần ôn lại.</p>}
     <p>{situation.mastered ? 'Tất cả thẻ đã thành thạo.' : `Cần ít nhất ${situation.minimumRounds} vòng nữa để tất cả thẻ thành thạo nếu trả lời đúng.`}</p>
     <div className="summary-attention"><h3>Cần chú ý</h3>{!snapshot ? <p>Vòng cũ không có danh sách câu sai.</p> : wrong.length ? <ul>{wrong.map(question => <li className="jp" key={cardKey(question)}><QuestionText text={question.questionText} /></li>)}</ul> : <p>Không có thẻ trả lời sai trong vòng này.</p>}</div>
     {error && <p className="notice notice-error" role="alert">{error}</p>}

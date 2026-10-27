@@ -4,7 +4,7 @@ import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, ArrowRight } from 'lucide-react'
 import { useAuth } from '../context/authContext.js'
 import { findLesson, lessonQuestions } from '../utils/roadmapContent.js'
-import { cardKey, createRound, answerCard, advanceAfterFeedback, LEVEL_LABELS, nodeStatus } from '../utils/masteryLearning.js'
+import { cardKey, enterNodeRound, nodeLearningDecision, answerCard, advanceAfterFeedback, LEVEL_LABELS, nodeStatus } from '../utils/masteryLearning.js'
 import { getMasteryProgress, saveMasteryProgress } from '../utils/storage.js'
 import useStudyShortcuts from '../hooks/useStudyShortcuts.js'
 import { speakJapanese } from '../utils/tts.js'
@@ -33,6 +33,7 @@ function MasterySession({ stageId, nodeId, lesson }) {
   const key = `${stageId}:${nodeId}`
   const [helpOpen, setHelpOpen] = useState(false)
   const helpCloseRef = useRef(null)
+  const autoStartRef = useRef('')
   const [progress, setProgress] = useState(() => getMasteryProgress())
   const [error, setError] = useState('')
   useEffect(() => { const refresh = () => setProgress(getMasteryProgress()); window.addEventListener('n3vjit:progress', refresh); return () => window.removeEventListener('n3vjit:progress', refresh) }, [])
@@ -42,12 +43,20 @@ function MasterySession({ stageId, nodeId, lesson }) {
   const keys = lesson.questions.filter(usableQuestion).map(cardKey)
   const oldKeys = lesson.stage.lessons.slice(0, lesson.index).flatMap((_, index) => lessonQuestions(lesson.stage, index).filter(usableQuestion).map(cardKey))
   const session = progress.nodes[key]
+  const decision = nodeLearningDecision(keys, progress.cards, session)
   const status = nodeStatus(keys, progress.cards, session?.completedRounds || 0)
   const save = (next) => { try { saveMasteryProgress(next); setProgress(next); setError(''); return true } catch (e) { setError(e.message); return false } }
   const startRound = () => {
-    const next = createRound(keys, oldKeys, progress.cards, session ? session.round + 1 : 1, session?.completedRounds || 0, Date.now(), updateId())
-    save({ ...progress, nodes: { ...progress.nodes, [key]: next } })
+    const entry = enterNodeRound(keys, oldKeys, progress.cards, session, Date.now(), updateId())
+    if (entry.action === 'start' || entry.action === 'review') save({ ...progress, nodes: { ...progress.nodes, [key]: entry.session } })
   }
+  useEffect(() => {
+    if (!keys.length || !['start', 'review'].includes(decision.action)) return
+    const marker = `${session?.updateId || 'new'}:${decision.round}`
+    if (autoStartRef.current === marker) return
+    autoStartRef.current = marker
+    startRound()
+  })
   const currentKey = session?.feedback?.key || session?.queue[0]
   const question = questionById[currentKey]
   const seed = `${session?.round}:${currentKey}:${session?.requeues?.[currentKey] || 0}`
@@ -68,7 +77,7 @@ function MasterySession({ stageId, nodeId, lesson }) {
     onSpeak: question ? () => speakJapanese(plainQuestionText(question.questionText)) : null,
   })
   if (!keys.length) return <section className="page-shell"><p>Bài học chưa có câu hỏi hợp lệ để luyện. Hãy quay lại lộ trình.</p><Link to="/" className="btn btn-secondary">Về lộ trình</Link></section>
-  if (session && !session.feedback && session.queue.length === 0) return <Navigate to={`/study/${stageId}/${nodeId}/summary`} replace />
+  if (decision.action === 'summary') return <Navigate to={`/study/${stageId}/${nodeId}/summary`} replace />
   return <div className="page-shell mastery-study">
     <Link className="text-link" aria-keyshortcuts="Escape" to={`/study/${stageId}/${nodeId}`}><ArrowLeft size={16}/> Trở về bài học</Link>
     <header className="mastery-study-head"><div><p className="eyebrow">{lesson.stage.title} · {lesson.stage.lessons[lesson.index]}</p><h1>Học bốn bậc</h1></div><div className="mastery-header-actions">{session && <span>Vòng {session.round}</span>}<button type="button" className="mastery-shortcuts-help" onClick={() => setHelpOpen(true)} aria-keyshortcuts="Shift+/" aria-label="Xem phím tắt">?</button></div></header>

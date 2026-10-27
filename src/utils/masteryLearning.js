@@ -44,6 +44,30 @@ export function createRound(keys, oldKeys, cards, round = 1, completedRounds = 0
   return { round, completedRounds, queue, requeues: {}, advanced: [], feedback: null, answered: 0, total: queue.length, roundStartLevels: Object.fromEntries(keys.map(key => [key, cards[key]?.level ?? 0])), wrongKeys: [], summary: null, ...stamp(now, updateId) }
 }
 
+export function nodeLearningDecision(keys, cards = {}, session = null) {
+  const weakCount = keys.filter(key => (cards[key]?.level ?? 0) < 3).length
+  if (!session) return { action: 'start', round: 1, weakCount }
+  if (session.feedback || session.queue.length) return { action: 'resume', round: session.round, weakCount }
+  if (weakCount) return { action: 'review', round: session.round + 1, weakCount }
+  return { action: 'summary', round: session.round, weakCount: 0 }
+}
+
+export function enterNodeRound(keys, oldKeys, cards, session, now, updateId) {
+  const decision = nodeLearningDecision(keys, cards, session)
+  const flaggedOnly = decision.action === 'review' && keys.every(key => cards[key]?.level === 3 || needsRecheck(cards[key]))
+  const sessionTime = Date.parse(session?.updatedAt)
+  const roundTime = Math.max(now, Number.isFinite(sessionTime) ? sessionTime + 1 : now)
+  return { ...decision, session: decision.action === 'start' || decision.action === 'review'
+    ? createRound(keys, flaggedOnly ? [] : oldKeys, cards, decision.round, session?.completedRounds || 0, roundTime, updateId)
+    : session }
+}
+
+export function currentRoundSituation(keys, cards, completedRounds, isLastNode, snapshot = null) {
+  const levels = Object.fromEntries(keys.map(key => [key, cards[key]?.level ?? 0]))
+  return { ...roundSummarySituation(levels, completedRounds, isLastNode),
+    changedSinceRound: Boolean(snapshot && keys.some(key => levels[key] !== snapshot.endLevels[key])) }
+}
+
 export function answerCard(session, cards, correct, now, updateId) {
   if (!session.queue.length || session.feedback) return { session, cards }
   const key = session.queue[0]

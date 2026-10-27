@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { answerCard, advanceAfterFeedback, createRound, nodeStatus, mergeMasteryProgress, validMasteryProgress } from './masteryLearning.js'
+import { answerCard, advanceAfterFeedback, applyReviewAnswer, createRound, currentRoundSituation, enterNodeRound, nodeLearningDecision, nodeStatus, mergeMasteryProgress, validMasteryProgress } from './masteryLearning.js'
 const time = Date.parse('2026-10-27T00:00:00Z')
 const cards = Object.fromEntries(['a','b','c','d','e'].map(key => [key, { level: 0, lastResult: 'wrong', updatedAt: new Date(time).toISOString(), updateId: key }]))
 test('bậc và giới hạn tăng trong vòng', () => {
@@ -88,4 +88,41 @@ test('lưu ảnh chụp vòng và thẻ sai qua phục hồi', async () => {
   assert.equal(validMasteryProgress(restored), true)
   assert.deepEqual(roundChanges(restored.nodes.n.summary), { up: 1, down: 1 })
   assert.deepEqual(restored.nodes.n.summary.wrongKeys, ['a'])
+})
+
+test('node hoàn tất được mở vòng mới cho thẻ bị hạ bậc sau kiểm tra', () => {
+  const keys = ['a', 'b', 'c']
+  assert.deepEqual(nodeLearningDecision(keys, {}, null), { action: 'start', round: 1, weakCount: 3 })
+  const mastered = Object.fromEntries(keys.map(key => [key, { ...cards[key], level: 3, lastResult: 'correct' }]))
+  const finished = { ...createRound(keys, [], mastered, 3, 2, time, 'round-3'), queue: [], completedRounds: 3,
+    summary: { round: 3, startLevels: { a: 2, b: 2, c: 2 }, endLevels: { a: 3, b: 3, c: 3 }, wrongKeys: [] } }
+  assert.equal(nodeLearningDecision(keys, mastered, { ...finished, queue: ['b'] }).action, 'resume')
+  assert.equal(nodeLearningDecision(keys, mastered, finished).action, 'summary')
+  const afterTest = { ...mastered, b: applyReviewAnswer(mastered.b, false, time + 1, 'review-wrong') }
+  assert.equal(afterTest.b.needsRecheck, true)
+  assert.deepEqual(nodeLearningDecision(keys, afterTest, finished), { action: 'review', round: 4, weakCount: 1 })
+  const entry = enterNodeRound(keys, ['older'], { ...afterTest, older: { ...cards.a, level: 0 } }, finished, time - 1, 'round-4')
+  assert.deepEqual(entry.session.queue, ['b'])
+  assert.equal(entry.session.completedRounds, 3)
+  assert.equal(Date.parse(entry.session.updatedAt), Date.parse(finished.updatedAt) + 1)
+  const recovered = answerCard(entry.session, afterTest, true, time + 3, 'recovered').cards.b
+  assert.equal(recovered.level, 3)
+  assert.equal(recovered.needsRecheck, undefined)
+  const failed = answerCard(entry.session, afterTest, false, time + 3, 'failed').cards.b
+  assert.equal(failed.level, 1)
+  assert.equal(failed.needsRecheck, undefined)
+})
+
+test('kết quả vòng dùng bậc hiện tại sau bài kiểm tra', () => {
+  const keys = ['a', 'b']
+  const snapshot = { endLevels: { a: 3, b: 3 } }
+  const mastered = { a: { ...cards.a, level: 3 }, b: { ...cards.b, level: 3 } }
+  const before = currentRoundSituation(keys, mastered, 3, false, snapshot)
+  assert.equal(before.mastered, true)
+  assert.equal(before.changedSinceRound, false)
+  const afterTest = { ...mastered, b: applyReviewAnswer(mastered.b, false, time + 1, 'review') }
+  const after = currentRoundSituation(keys, afterTest, 3, false, snapshot)
+  assert.equal(after.mastered, false)
+  assert.deepEqual(after.counts, [0, 0, 1, 1])
+  assert.equal(after.changedSinceRound, true)
 })
