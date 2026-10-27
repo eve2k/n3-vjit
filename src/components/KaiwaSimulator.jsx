@@ -45,8 +45,8 @@ export default function KaiwaSimulator() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl p-4 pb-24">
-      <h1 className="mb-3 text-2xl font-semibold">会話 Simulator</h1>
+    <div className="page-shell content-page kaiwa-page">
+      <div className="page-heading"><div><p className="eyebrow">KỸ NĂNG · 会話</p><h1>Luyện hội thoại</h1><p className="page-description">Luyện trả lời theo các chủ đề giao tiếp thường gặp.</p></div></div>
       <div className="mb-4 grid gap-2 rounded-lg border border-[var(--line)] bg-[var(--card)] p-3 sm:grid-cols-2">
         <input className="rounded border border-[var(--line)] bg-transparent px-2 py-1" placeholder="Tên" value={profile.name} onChange={(e) => save({ name: e.target.value })} />
         <input className="rounded border border-[var(--line)] bg-transparent px-2 py-1" placeholder="Sinh nhật (VD: 5月20日)" value={profile.birthday} onChange={(e) => save({ birthday: e.target.value })} />

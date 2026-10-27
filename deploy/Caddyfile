@@ -1,22 +1,41 @@
 {
 	admin off
-	auto_https off
+	https_port 8443
+	auto_https disable_redirects
 }
 
-http://chungchitiengnhatvjit.duckdns.org:4173, http://192.168.1.105:4173, http://127.0.0.1:4173, http://localhost:4173 {
+(website) {
 	root * /home/eve/workspace/website/n3-vjit-webapp/dist
 	encode zstd gzip
 	header X-Content-Type-Options nosniff
-
 	@assets path /assets/*
 	handle @assets {
 		header Cache-Control "public, max-age=31536000, immutable"
 		file_server
 	}
-
 	handle {
 		header Cache-Control no-cache
 		try_files {path} /index.html
 		file_server
 	}
+}
+
+# Public port 80 is forwarded to 4173 by the local socket proxy.
+http://chungchitiengnhatvjit.duckdns.org:4173 {
+	redir https://chungchitiengnhatvjit.duckdns.org{uri} 308
+}
+
+# Keep direct LAN access available.
+http://192.168.1.105:4173, http://127.0.0.1:4173, http://localhost:4173 {
+	import website
+}
+
+# Router forwards public TCP 443 to server TCP 8443.
+https://chungchitiengnhatvjit.duckdns.org:8443 {
+	tls {
+		issuer acme {
+			disable_http_challenge
+		}
+	}
+	import website
 }

@@ -3,6 +3,9 @@ import { test } from 'node:test'
 import { createAuthClient } from '../services/authClient.js'
 import { createProgressSync } from '../services/progressSync.js'
 import { reconcileProgress, sameProgress } from './syncProgress.js'
+import { beginReview, answerReview, finishReview, recordReviewResult, emptyReviewProgress } from './reviewProgress.js'
+import { reviewCatalog } from './reviewLearning.js'
+import { createRound, answerCard } from './masteryLearning.js'
 
 const clone = value => JSON.parse(JSON.stringify(value))
 const cards = values => ({ n3vjit_masteredFlashcards: values })
@@ -198,4 +201,72 @@ test('reopening offline restores the known local account workspace while preserv
   assert.equal(restoredUser, 'known-user')
   await assert.rejects(client.loadProgress('different-account'), { code: 'session_not_found' })
   assert.ok(storage.getItem(client.storageKey))
+})
+
+test('mastery merges independent cards and selects the newest complete record', () => {
+  const item = (level, updatedAt, updateId) => ({ level, lastResult: 'correct', updatedAt, updateId })
+  const base = { n3vjit_mastery: { cards: { a: item(0, '2026-01-01T00:00:00Z', 'a') }, nodes: {} } }
+  const local = { n3vjit_mastery: { cards: { a: item(1, '2026-01-02T00:00:00Z', 'b'), b: item(1, '2026-01-02T00:00:00Z', 'c') }, nodes: {} } }
+  const remote = { n3vjit_mastery: { cards: { a: item(2, '2026-01-03T00:00:00Z', 'd'), c: item(1, '2026-01-03T00:00:00Z', 'e') }, nodes: {} } }
+  const result = reconcileProgress(base, local, remote)
+  assert.equal(result.n3vjit_mastery.cards.a.level, 2)
+  assert.ok(result.n3vjit_mastery.cards.b)
+  assert.ok(result.n3vjit_mastery.cards.c)
+  const firstSync = reconcileProgress(null, local, remote)
+  assert.equal(firstSync.n3vjit_mastery.cards.a.level, 2)
+})
+
+test('two browser coordinators sync review cleanup, node recovery, offline edits and optimistic conflicts', async () => {
+  const now = Date.parse('2026-10-27T00:00:00Z')
+  const q = reviewCatalog('kanji')[0]
+  const mastered = { cards: { [q.key]: { level: 3, lastResult: 'correct', updatedAt: new Date(now).toISOString(), updateId: 'learned' } }, nodes: {} }
+  const opts = step => ({ now: now + step, updateId: `event-${step}`, random: () => .25 })
+  const active = beginReview(emptyReviewProgress(), mastered, { stageId: 'kanji', count: 1 }, opts(1))
+  let cloud = null, version = 0, offline = false, conflict = false
+  const load = async () => {
+    if (offline) throw Object.assign(new Error('offline'), { code: 'network_error' })
+    return cloud && clone(cloud)
+  }
+  const save = async (data, stamp) => {
+    if (conflict) { conflict = false; cloud.updated_at = `v${++version}`; throw Object.assign(new Error('conflict'), { status: 409 }) }
+    if (stamp !== (cloud?.updated_at || null)) throw Object.assign(new Error('conflict'), { status: 409 })
+    cloud = { data: clone(data), updated_at: `v${++version}` }
+    return clone(cloud)
+  }
+  const a = fixture({ initial: { n3vjit_mastery: mastered, n3vjit_review: active }, load, save })
+  const b = fixture({ load, save })
+  await a.sync.syncNow()
+  await b.sync.syncNow()
+  assert.deepEqual(b.local().n3vjit_review.session.data.items, active.session.data.items)
+  const wrong = Object.keys(q.options).find(letter => letter !== q.correctAnswer)
+  const answered = answerReview(active, 'event-1', q.key, wrong, opts(2))
+  const finished = finishReview(answered, mastered, 'event-1', opts(3))
+  a.edit({ n3vjit_mastery: finished.mastery, n3vjit_review: finished.progress })
+  await a.sync.syncNow()
+  await b.sync.syncNow()
+  assert.equal(b.local().n3vjit_review.session.data, null)
+  assert.equal(b.local().n3vjit_mastery.cards[q.key].needsRecheck, true)
+
+  const round = createRound([q.key], [], b.local().n3vjit_mastery.cards, 1, 0, now + 4, 'round')
+  const recovered = answerCard(round, b.local().n3vjit_mastery.cards, true, now + 5, 'node-answer')
+  b.edit({ ...b.local(), n3vjit_mastery: { cards: recovered.cards, nodes: { 'kanji:lesson-1': recovered.session } } })
+  await b.sync.syncNow()
+  const offlineEdit = recordReviewResult(a.local().n3vjit_review, 'renshuu4:r4_q1', true, opts(6))
+  offline = true
+  a.edit({ ...a.local(), n3vjit_review: offlineEdit })
+  await a.sync.syncNow()
+  assert.equal(a.states.at(-1).status, 'offline')
+  assert.equal(a.local().n3vjit_review.results['renshuu4:r4_q1'].correct, true)
+  offline = false
+  conflict = true
+  await a.sync.syncNow()
+  await b.sync.syncNow()
+  for (const device of [a, b]) {
+    assert.equal(device.states.at(-1).status, 'synced')
+    assert.equal(device.local().n3vjit_mastery.cards[q.key].level, 3)
+    assert.equal(device.local().n3vjit_mastery.cards[q.key].needsRecheck, undefined)
+    assert.equal(device.local().n3vjit_review.session.data, null)
+    assert.equal(device.local().n3vjit_review.results['renshuu4:r4_q1'].correct, true)
+    device.sync.stop()
+  }
 })

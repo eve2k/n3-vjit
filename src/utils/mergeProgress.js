@@ -1,9 +1,26 @@
+import { mergeMasteryProgress } from './masteryLearning.js';
 import { newerSrsRecord } from './spacedRepetition.js';
 import { mergeStudyRoadmaps } from './studyRoadmap.js';
+import { mergeReviewProgress } from './reviewProgress.js';
 const union = (left = [], right = []) => [...new Set([...left, ...right])];
+
+export function mergePomodoroLearning(left = {}, right = {}) {
+  left ||= {}; right ||= {};
+  const cycles = new Map();
+  for (const cycle of [...(left.cycles || []), ...(right.cycles || [])]) {
+    const existing = cycles.get(cycle.id);
+    cycles.set(cycle.id, existing ? { ...existing, ...cycle, startedAt: existing.startedAt < cycle.startedAt ? existing.startedAt : cycle.startedAt, completedAt: existing.completedAt || cycle.completedAt } : cycle);
+  }
+  const events = new Map();
+  for (const event of [...(left.events || []), ...(right.events || [])]) if (!events.has(event.id)) events.set(event.id, event);
+  return { cycles: [...cycles.values()].sort((a, b) => a.startedAt.localeCompare(b.startedAt)), events: [...events.values()].sort((a, b) => a.at.localeCompare(b.at) || a.id.localeCompare(b.id)) };
+}
 
 export function mergeProgress(account, guest) {
   const merged = { ...guest, ...account };
+  if (account.n3vjit_review || guest.n3vjit_review) merged.n3vjit_review = mergeReviewProgress(account.n3vjit_review, guest.n3vjit_review);
+  if (account.n3vjit_mastery || guest.n3vjit_mastery) merged.n3vjit_mastery = mergeMasteryProgress(account.n3vjit_mastery, guest.n3vjit_mastery);
+  if (account.n3vjit_pomodoroLearning || guest.n3vjit_pomodoroLearning) merged.n3vjit_pomodoroLearning = mergePomodoroLearning(account.n3vjit_pomodoroLearning, guest.n3vjit_pomodoroLearning);
   if (account.n3vjit_studyRoadmap || guest.n3vjit_studyRoadmap) merged.n3vjit_studyRoadmap = mergeStudyRoadmaps(account.n3vjit_studyRoadmap, guest.n3vjit_studyRoadmap);
   if (account.n3vjit_spacedRepetition || guest.n3vjit_spacedRepetition) {
     merged.n3vjit_spacedRepetition = Object.assign(Object.create(null), guest.n3vjit_spacedRepetition);

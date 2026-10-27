@@ -3,7 +3,7 @@ export const renshuu3 = [
     "id": "r3_q1",
     "section": "renshuu3",
     "questionNumber": 1,
-    "questionText": "明日 試験が あります。",
+    "questionText": "明日[[試験]]があります。",
     "highlightWord": "しけん",
     "options": {
       "A": "しけん",
@@ -20,7 +20,7 @@ export const renshuu3 = [
     "id": "r3_q2",
     "section": "renshuu3",
     "questionNumber": 2,
-    "questionText": "世界を りょこうしたいです。",
+    "questionText": "[[世界]]をりょこうしたいです。",
     "highlightWord": "せかい",
     "options": {
       "A": "せいかい",
@@ -37,7 +37,7 @@ export const renshuu3 = [
     "id": "r3_q3",
     "section": "renshuu3",
     "questionNumber": 3,
-    "questionText": "じかんが ありませんから、急いでください。",
+    "questionText": "じかんがありませんから、[[急いで]]ください。",
     "highlightWord": "いそいで",
     "options": {
       "A": "あるいで",
@@ -54,7 +54,7 @@ export const renshuu3 = [
     "id": "r3_q4",
     "section": "renshuu3",
     "questionNumber": 4,
-    "questionText": "彼女は 高校時代の親しい友人です。",
+    "questionText": "彼女は高校時代の[[親しい]]友人です。",
     "highlightWord": "したしい",
     "options": {
       "A": "うれしい",
@@ -71,7 +71,7 @@ export const renshuu3 = [
     "id": "r3_q5",
     "section": "renshuu3",
     "questionNumber": 5,
-    "questionText": "私立ではなく、国立の 大学に 入りたいです。",
+    "questionText": "私立ではなく、[[国立]]の大学に入りたいです。",
     "highlightWord": "こくりつ",
     "options": {
       "A": "くにたち",
@@ -88,7 +88,7 @@ export const renshuu3 = [
     "id": "r3_q6",
     "section": "renshuu3",
     "questionNumber": 6,
-    "questionText": "数学は 得意ですが、英語は 苦手です。",
+    "questionText": "数学は得意ですが、英語は[[苦手]]です。",
     "highlightWord": "にがて",
     "options": {
       "A": "くしゅ",
@@ -105,7 +105,7 @@ export const renshuu3 = [
     "id": "r3_q7",
     "section": "renshuu3",
     "questionNumber": 7,
-    "questionText": "彼女に 自分の 気持ちを 伝えた。",
+    "questionText": "彼女に自分の気持ちを[[伝えた]]。",
     "highlightWord": "つたえた",
     "options": {
       "A": "こたえた",
@@ -122,7 +122,7 @@ export const renshuu3 = [
     "id": "r3_q8",
     "section": "renshuu3",
     "questionNumber": 8,
-    "questionText": "失敗は 成功のもとだから、元気を 出しなさいと 言われた。",
+    "questionText": "[[失敗]]は成功のもとだから、元気を出しなさいと言われた。",
     "highlightWord": "しっぱい",
     "options": {
       "A": "しつはい",
@@ -139,7 +139,7 @@ export const renshuu3 = [
     "id": "r3_q9",
     "section": "renshuu3",
     "questionNumber": 9,
-    "questionText": "人間には だれでも 欠点が あります。",
+    "questionText": "[[人間]]にはだれでも欠点があります。",
     "highlightWord": "にんげん",
     "options": {
       "A": "じかん",
@@ -156,7 +156,7 @@ export const renshuu3 = [
     "id": "r3_q10",
     "section": "renshuu3",
     "questionNumber": 10,
-    "questionText": "このページの 五行目を 見てください。",
+    "questionText": "このページの[[五行目]]を見てください。",
     "highlightWord": "ごぎょうめ",
     "options": {
       "A": "ごぎょうめ",
@@ -173,7 +173,7 @@ export const renshuu3 = [
     "id": "r3_q11",
     "section": "renshuu3",
     "questionNumber": 11,
-    "questionText": "どちらのほうが 大きいか、比べてみましょう。",
+    "questionText": "どちらのほうが大きいか、[[比べて]]みましょう。",
     "highlightWord": "くらべて",
     "options": {
       "A": "ならべて",
@@ -190,7 +190,7 @@ export const renshuu3 = [
     "id": "r3_q12",
     "section": "renshuu3",
     "questionNumber": 12,
-    "questionText": "山本さんは とても 正直な人です。",
+    "questionText": "山本さんはとても[[正直な]]人です。",
     "highlightWord": "しょうじき",
     "options": {
       "A": "しょうじき",
@@ -207,7 +207,7 @@ export const renshuu3 = [
     "id": "r3_q13",
     "section": "renshuu3",
     "questionNumber": 13,
-    "questionText": "彼女の 笑顔は、とても かわいいです。",
+    "questionText": "彼女の[[笑顔]]は、とてもかわいいです。",
     "highlightWord": "えがお",
     "options": {
       "A": "しょうがん",
@@ -224,7 +224,7 @@ export const renshuu3 = [
     "id": "r3_q14",
     "section": "renshuu3",
     "questionNumber": 14,
-    "questionText": "そんなに 働きすぎると、病気に なって 倒れますよ。",
+    "questionText": "そんなに働きすぎると、病気になって[[倒れます]]よ。",
     "highlightWord": "たおれます",
     "options": {
       "A": "つかれます",
@@ -241,7 +241,7 @@ export const renshuu3 = [
     "id": "r3_q15",
     "section": "renshuu3",
     "questionNumber": 15,
-    "questionText": "救急車に 乗ったことが ありますか。",
+    "questionText": "[[救急車]]に乗ったことがありますか。",
     "highlightWord": "きゅうきゅうしゃ",
     "options": {
       "A": "きゅきゅしゃ",
@@ -258,7 +258,7 @@ export const renshuu3 = [
     "id": "r3_q16",
     "section": "renshuu3",
     "questionNumber": 16,
-    "questionText": "早く 結婚したいのに、なかなか いい相手が みつかりません。",
+    "questionText": "早く結婚したいのに、なかなかいい[[相手]]がみつかりません。",
     "highlightWord": "あいて",
     "options": {
       "A": "そうて",
@@ -275,7 +275,7 @@ export const renshuu3 = [
     "id": "r3_q17",
     "section": "renshuu3",
     "questionNumber": 17,
-    "questionText": "コーヒーを こぼして、白いスカートが 汚れてしまった。",
+    "questionText": "コーヒーをこぼして、白いスカートが[[汚れて]]しまった。",
     "highlightWord": "よごれて",
     "options": {
       "A": "よごれて",
@@ -292,7 +292,7 @@ export const renshuu3 = [
     "id": "r3_q18",
     "section": "renshuu3",
     "questionNumber": 18,
-    "questionText": "部屋の 家賃は 月末に 払います。",
+    "questionText": "部屋の[[家賃]]は月末に払います。",
     "highlightWord": "やちん",
     "options": {
       "A": "やちん",
@@ -309,7 +309,7 @@ export const renshuu3 = [
     "id": "r3_q19",
     "section": "renshuu3",
     "questionNumber": 19,
-    "questionText": "近所に 有名人が 住んでいます。",
+    "questionText": "[[近所]]に有名人が住んでいます。",
     "highlightWord": "きんじょ",
     "options": {
       "A": "きんじょ",
@@ -326,7 +326,7 @@ export const renshuu3 = [
     "id": "r3_q20",
     "section": "renshuu3",
     "questionNumber": 20,
-    "questionText": "この辺りは、地震が 多い地域です",
+    "questionText": "この辺りは、[[地震]]が多い地域です",
     "highlightWord": "じしん",
     "options": {
       "A": "じちん",
@@ -343,7 +343,7 @@ export const renshuu3 = [
     "id": "r3_q21",
     "section": "renshuu3",
     "questionNumber": 21,
-    "questionText": "使わないときは、ふたを 閉じて おいてください。",
+    "questionText": "使わないときは、ふたを[[閉じて]]おいてください。",
     "highlightWord": "とじて",
     "options": {
       "A": "こじて",
@@ -360,7 +360,7 @@ export const renshuu3 = [
     "id": "r3_q22",
     "section": "renshuu3",
     "questionNumber": 22,
-    "questionText": "東京は とても 便利な町だと 思います。",
+    "questionText": "東京はとても[[便利な]]町だと思います。",
     "highlightWord": "べんりな",
     "options": {
       "A": "べんりな",
@@ -377,7 +377,7 @@ export const renshuu3 = [
     "id": "r3_q23",
     "section": "renshuu3",
     "questionNumber": 23,
-    "questionText": "何か 調べるなら、これを 使うといいです。",
+    "questionText": "何か[[調べる]]なら、これを使うといいです。",
     "highlightWord": "しらべる",
     "options": {
       "A": "ならべる",
@@ -394,7 +394,7 @@ export const renshuu3 = [
     "id": "r3_q24",
     "section": "renshuu3",
     "questionNumber": 24,
-    "questionText": "パーティーに 出席する人は、このノートに 名前を 書いてください。",
+    "questionText": "パーティーに[[出席]]する人は、このノートに名前を書いてください。",
     "highlightWord": "しゅっせき",
     "options": {
       "A": "しゅせき",
@@ -411,7 +411,7 @@ export const renshuu3 = [
     "id": "r3_q25",
     "section": "renshuu3",
     "questionNumber": 25,
-    "questionText": "レストランの 情報が たくさん 載っている本を 知っていますか。",
+    "questionText": "レストランの[[情報]]がたくさん載っている本を知っていますか。",
     "highlightWord": "じょうほう",
     "options": {
       "A": "じょうほ",
@@ -428,7 +428,7 @@ export const renshuu3 = [
     "id": "r3_q26",
     "section": "renshuu3",
     "questionNumber": 26,
-    "questionText": "田中さんは 一生懸命 どりょくして、栄養士の 資格を 取った。",
+    "questionText": "田中さんは一生懸命[[どりょく]]して、栄養士の資格を取った。",
     "highlightWord": "努力",
     "options": {
       "A": "労力",
@@ -445,7 +445,7 @@ export const renshuu3 = [
     "id": "r3_q27",
     "section": "renshuu3",
     "questionNumber": 27,
-    "questionText": "今日は かかりの 者が いませんので、明日来てください。",
+    "questionText": "今日は[[かかり]]の者がいませんので、明日来てください。",
     "highlightWord": "係り",
     "options": {
       "A": "係り",
@@ -462,7 +462,7 @@ export const renshuu3 = [
     "id": "r3_q28",
     "section": "renshuu3",
     "questionNumber": 28,
-    "questionText": "今日、試験の けっかが 発表された。",
+    "questionText": "今日、試験の[[けっか]]が発表された。",
     "highlightWord": "結果",
     "options": {
       "A": "決課",
@@ -513,7 +513,7 @@ export const renshuu3 = [
     "id": "r3_q31",
     "section": "renshuu3",
     "questionNumber": 31,
-    "questionText": "風で 目に すなが 入ってしまった。",
+    "questionText": "風で目に[[すな]]が入ってしまった。",
     "highlightWord": "砂",
     "options": {
       "A": "虫",
@@ -547,7 +547,7 @@ export const renshuu3 = [
     "id": "r3_q33",
     "section": "renshuu3",
     "questionNumber": 33,
-    "questionText": "鈴木教授は 多くの 若い学者を そだてた。",
+    "questionText": "鈴木教授は多くの若い学者を[[そだてた]]。",
     "highlightWord": "育てた",
     "options": {
       "A": "養てた",
@@ -564,7 +564,7 @@ export const renshuu3 = [
     "id": "r3_q34",
     "section": "renshuu3",
     "questionNumber": 34,
-    "questionText": "1912年、日本は 初めてオリンピックに さんかした。",
+    "questionText": "1912年、日本は初めてオリンピックに[[さんか]]した。",
     "highlightWord": "参加",
     "options": {
       "A": "参伽",
@@ -581,7 +581,7 @@ export const renshuu3 = [
     "id": "r3_q35",
     "section": "renshuu3",
     "questionNumber": 35,
-    "questionText": "奨学金の もうしこみ方法を 教えてください。",
+    "questionText": "奨学金の[[もうしこみ]]方法を教えてください。",
     "highlightWord": "申し込み",
     "options": {
       "A": "申し辻み",
@@ -598,7 +598,7 @@ export const renshuu3 = [
     "id": "r3_q36",
     "section": "renshuu3",
     "questionNumber": 36,
-    "questionText": "昨日、教室で まなんだことを 復習した。",
+    "questionText": "昨日、教室で[[まなんだ]]ことを復習した。",
     "highlightWord": "学んだ",
     "options": {
       "A": "訓んだ",
@@ -632,7 +632,7 @@ export const renshuu3 = [
     "id": "r3_q38",
     "section": "renshuu3",
     "questionNumber": 38,
-    "questionText": "きゅうこう電車で 行かなくても 間に合いますよ。",
+    "questionText": "[[きゅうこう]]電車で行かなくても間に合いますよ。",
     "highlightWord": "急行",
     "options": {
       "A": "早急",
@@ -683,7 +683,7 @@ export const renshuu3 = [
     "id": "r3_q41",
     "section": "renshuu3",
     "questionNumber": 41,
-    "questionText": "おゆを 沸かしてください。",
+    "questionText": "[[おゆ]]を沸かしてください。",
     "highlightWord": "お湯",
     "options": {
       "A": "お湯",
@@ -717,7 +717,7 @@ export const renshuu3 = [
     "id": "r3_q43",
     "section": "renshuu3",
     "questionNumber": 43,
-    "questionText": "隣のむらの祭で 金魚を 三匹 買った。",
+    "questionText": "隣の[[むら]]の祭で金魚を三匹買った。",
     "highlightWord": "村",
     "options": {
       "A": "屯",
@@ -734,7 +734,7 @@ export const renshuu3 = [
     "id": "r3_q44",
     "section": "renshuu3",
     "questionNumber": 44,
-    "questionText": "最近 背中や 腰のほねが 痛む。",
+    "questionText": "最近背中や腰の[[ほね]]が痛む。",
     "highlightWord": "骨",
     "options": {
       "A": "肩",
@@ -751,7 +751,7 @@ export const renshuu3 = [
     "id": "r3_q45",
     "section": "renshuu3",
     "questionNumber": 45,
-    "questionText": "日本の会社で はたらきたい。",
+    "questionText": "日本の会社で[[はたらきたい]]。",
     "highlightWord": "働きたい",
     "options": {
       "A": "動きたい",
@@ -768,7 +768,7 @@ export const renshuu3 = [
     "id": "r3_q46",
     "section": "renshuu3",
     "questionNumber": 46,
-    "questionText": "彼は 絶対に 約束を やぶらない人だ。",
+    "questionText": "彼は絶対に約束を[[やぶらない]]人だ。",
     "highlightWord": "破らない",
     "options": {
       "A": "守らない",
@@ -785,7 +785,7 @@ export const renshuu3 = [
     "id": "r3_q47",
     "section": "renshuu3",
     "questionNumber": 47,
-    "questionText": "あの工場は ひろくする けいかくが ある。",
+    "questionText": "あの工場はひろくする[[けいかく]]がある。",
     "highlightWord": "計画",
     "options": {
       "A": "計画",
@@ -802,7 +802,7 @@ export const renshuu3 = [
     "id": "r3_q48",
     "section": "renshuu3",
     "questionNumber": 48,
-    "questionText": "工事のため、ちかみち させられた。",
+    "questionText": "工事のため、[[ちかみち]]させられた。",
     "highlightWord": "近道",
     "options": {
       "A": "肩道",
@@ -819,7 +819,7 @@ export const renshuu3 = [
     "id": "r3_q49",
     "section": "renshuu3",
     "questionNumber": 49,
-    "questionText": "ホームでは 黄色線のうちがわで 電車を 待ちましょう。",
+    "questionText": "ホームでは黄色線の[[うちがわ]]で電車を待ちましょう。",
     "highlightWord": "内側",
     "options": {
       "A": "家川",
@@ -836,7 +836,7 @@ export const renshuu3 = [
     "id": "r3_q50",
     "section": "renshuu3",
     "questionNumber": 50,
-    "questionText": "さいふに 100円だまが たくさん 入っている。",
+    "questionText": "さいふに100円[[だま]]がたくさん入っている。",
     "highlightWord": "玉",
     "options": {
       "A": "全",

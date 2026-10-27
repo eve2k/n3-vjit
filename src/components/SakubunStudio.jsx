@@ -38,8 +38,8 @@ export default function SakubunStudio() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl p-4 pb-24">
-      <h1 className="mb-3 text-2xl font-semibold">作文 Studio</h1>
+    <div className="page-shell content-page sakubun-page">
+      <div className="page-heading"><div><p className="eyebrow">KỸ NĂNG · 作文</p><h1>Luyện viết</h1><p className="page-description">Viết theo chủ đề rồi đối chiếu với bài mẫu.</p></div></div>
       <div className="mb-4 grid gap-2 rounded-lg border border-[var(--line)] bg-[var(--card)] p-3 sm:grid-cols-2">
         <input
           className="rounded border border-[var(--line)] bg-transparent px-2 py-1"

@@ -35,15 +35,10 @@ export default function GrammarGuide() {
   }, [focusId, visible])
 
   return (
-    <main className="mx-auto max-w-6xl p-4 pb-24">
-      <div className="mb-5 flex items-start gap-3">
-        <BookOpen className="mt-1 shrink-0 text-[var(--accent)]" size={26} aria-hidden="true" />
-        <div>
-          <h1 className="text-2xl font-semibold">Tra cứu ngữ pháp và các thể</h1>
-          <p className="mt-1 text-sm text-[var(--muted)]">
+    <div className="page-shell content-page grammar-page">
+      <div className="page-heading"><div><p className="eyebrow">KỸ NĂNG · 文法</p><h1>Ngữ pháp và các thể</h1><p className="page-description">
             Các mẫu xuất hiện trong đề cương của trường: 練習4, 練習5 và cấu trúc bắt buộc của 会話 sinh nhật.
-          </p>
-        </div>
+          </p></div><BookOpen className="mt-1 shrink-0 text-[var(--accent)]" size={26} aria-hidden="true" />
       </div>
 
       <div className="flex flex-wrap gap-2" role="tablist" aria-label="Nhóm kiến thức">
@@ -90,7 +85,7 @@ export default function GrammarGuide() {
           {visible.map((item) => <GuideCard key={item.id} item={item} focused={item.id === focusId} />)}
         </div>
       )}
-    </main>
+    </div>
   )
 }
 

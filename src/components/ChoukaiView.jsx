@@ -42,8 +42,8 @@ export default function ChoukaiView() {
   })
 
   return (
-    <div className="mx-auto max-w-3xl p-4 pb-24">
-      <h1 className="mb-2 text-2xl font-semibold">聴解</h1>
+    <div className="page-shell content-page choukai-page">
+      <div className="page-heading"><div><p className="eyebrow">KỸ NĂNG · 聴解</p><h1>Luyện nghe</h1></div></div>
       <p className="mb-4 text-sm text-[var(--muted)]">
         Đề giấy không kèm file nghe. 問題4–5 có đáp án trong tài liệu tổng hợp; 問題1–3 dùng để xem lựa chọn/hình và gắn audio nếu bạn có.
       </p>
@@ -74,6 +74,7 @@ export default function ChoukaiView() {
                 </p>
                 <SpeakButton text={Object.values(q.options || {}).join('。')} />
               </div>
+              {!Object.hasOwn(q.options || {}, q.correctAnswer) && <p className="listening-unscored">Chưa có đáp án · Không chấm tự động</p>}
               {q.image && (
                 <img src={q.image} alt="" className="mb-2 max-h-56 rounded border border-[var(--line)] object-contain" />
               )}

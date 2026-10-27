@@ -9,7 +9,7 @@ const formatTime = (milliseconds) => {
   return `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`
 }
 
-export default function PomodoroTimer() {
+export default function PomodoroTimer({ onStageChange }) {
   const [settings, setSettings] = useState(POMODORO_DEFAULTS)
   const [stage, setStage] = useState({ kind: 'focus', status: 'idle', remainingMs: duration(POMODORO_DEFAULTS, 'focus'), deadline: null, completed: 0 })
   const [now, setNow] = useState(Date.now)
@@ -21,6 +21,8 @@ export default function PomodoroTimer() {
     const timer = setInterval(() => setNow(Date.now()), 1000)
     return () => clearInterval(timer)
   }, [stage.status, stage.deadline])
+
+  useEffect(() => { onStageChange?.({ kind: stage.kind, status: stage.status }) }, [stage.kind, stage.status, onStageChange])
 
   useEffect(() => {
     if (stage.status !== 'running' || remaining > 0) return

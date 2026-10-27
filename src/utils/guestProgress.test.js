@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { beforeEach, test } from 'node:test'
-import { addQuizResult, addWrongQuestion, exportProgress, getCompletedQuestions, getCustomSakubun, getDokkaiProgress, getLastLesson, getMasteredFlashcards, getQuizHistory, getTheme, getUserProfile, getWrongQuestions, importProgress, markDokkaiCompleted, markQuestionCompleted, markWrongQuestionCorrect, readProgressSnapshot, resetAllProgress, saveCustomSakubun, saveLastLesson, saveQuizAttempt, saveUserProfile, setStorageUser, setTheme, toggleFlashcardMastered, writeProgressSnapshot } from './storage.js'
+import { addQuizResult, addWrongQuestion, exportProgress, getCompletedQuestions, getCustomSakubun, getDokkaiProgress, getLastLesson, getMasteredFlashcards, getPomodoroLearning, getQuizHistory, getTheme, getUserProfile, getWrongQuestions, importProgress, markDokkaiCompleted, markQuestionCompleted, markWrongQuestionCorrect, readProgressSnapshot, resetAllProgress, saveCustomSakubun, saveLastLesson, savePomodoroLearning, saveQuizAttempt, saveUserProfile, setStorageUser, setTheme, toggleFlashcardMastered, writeProgressSnapshot } from './storage.js'
 
 let data
 beforeEach(() => {
@@ -19,9 +19,11 @@ test('guest practice never writes learning data or history to browser storage', 
   saveLastLesson('section', 'question')
   markDokkaiCompleted('passage')
   addQuizResult({ total: 1, correct: 1 })
+  savePomodoroLearning({ cycles: [], events: [] })
   const transient = saveQuizAttempt({ id: 'guest-exam', total: 1, correct: 1 })
   assert.equal(transient.id, 'guest-exam')
   assert.equal(data.size, 0)
+  assert.deepEqual(getPomodoroLearning(), { cycles: [], events: [] })
   assert.deepEqual(getCompletedQuestions(), {})
   assert.deepEqual(getWrongQuestions(), {})
   assert.deepEqual(getMasteredFlashcards(), [])
@@ -30,6 +32,14 @@ test('guest practice never writes learning data or history to browser storage', 
   assert.deepEqual(getQuizHistory(), [])
   assert.equal(getLastLesson(), null)
   assert.equal(getUserProfile().name, '')
+})
+
+test('signed-in Pomodoro events are scoped into snapshots for sync and backup', () => {
+  setStorageUser('learner')
+  const progress = { cycles: [{ id: 'round', startedAt: '2026-01-01T00:00:00.000Z', completedAt: null }], events: [{ id: 'event', unitId: 'unit', cycleId: 'round', contentType: 'quiz', correct: true, at: '2026-01-01T00:01:00.000Z', dueAtStep: 6 }] }
+  savePomodoroLearning(progress)
+  assert.deepEqual(getPomodoroLearning(), progress)
+  assert.deepEqual(readProgressSnapshot('learner').n3vjit_pomodoroLearning, progress)
 })
 
 test('legacy guest data is ignored and never appears in a signed-in account', () => {

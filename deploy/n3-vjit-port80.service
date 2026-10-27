@@ -1,0 +1,9 @@
+[Unit]
+Description=Forward C2J Study HTTP to local web server
+Requires=n3-vjit-port80.socket
+After=n3-vjit-port80.socket
+
+[Service]
+User=eve
+ExecStart=/usr/lib/systemd/systemd-socket-proxyd 127.0.0.1:4173
+NoNewPrivileges=true

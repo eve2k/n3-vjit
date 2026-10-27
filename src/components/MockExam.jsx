@@ -1,3 +1,4 @@
+import QuestionText from './QuestionText.jsx'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, BookOpen, CheckCircle2, Clock3, Headphones, PenLine, RotateCcw, Save, Send, Trophy } from 'lucide-react'
@@ -184,7 +185,7 @@ export default function MockExam() {
 function ExamQuestion({ question, number, total, answers, reviewed, choose, pendingChoice, active = false, onActivate }) {
   const pick = answers[question.id]
   const known = Object.hasOwn(question.options, question.correctAnswer)
-  return <section id={`exam-question-${question.id}`} className={`panel question-card ${active ? 'shortcut-active' : ''}`} onFocus={onActivate} onPointerDown={onActivate}><div className="question-meta"><span>Câu {number}/{total}</span>{reviewed && known && <span>{!pick ? 'Chưa trả lời' : String(pick) === String(question.correctAnswer) ? 'Đúng' : 'Sai'}</span>}</div>{question.image && <img src={question.image} alt={`Hình minh họa câu ${number}`} className="mb-5 max-h-64 rounded-lg object-contain" />}<h3 className="jp question-text">{question.questionText}</h3><div className="answer-list">{Object.entries(question.options).map(([letter, text]) => {
+  return <section id={`exam-question-${question.id}`} className={`panel question-card ${active ? 'shortcut-active' : ''}`} onFocus={onActivate} onPointerDown={onActivate}><div className="question-meta"><span>Câu {number}/{total}</span>{reviewed && known && <span>{!pick ? 'Chưa trả lời' : String(pick) === String(question.correctAnswer) ? 'Đúng' : 'Sai'}</span>}{!known && <span className="listening-unscored">Chưa có đáp án · Không chấm tự động</span>}</div>{question.image && <img src={question.image} alt={`Hình minh họa câu ${number}`} className="mb-5 max-h-64 rounded-lg object-contain" />}<h3 className="jp question-text"><QuestionText text={question.questionText} /></h3><div className="answer-list">{Object.entries(question.options).map(([letter, text]) => {
     const selected = (pendingChoice || pick) === letter
     let state = selected ? 'is-selected' : ''
     if (reviewed && known) {

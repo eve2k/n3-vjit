@@ -1,6 +1,10 @@
+import { validMasteryProgress } from './masteryLearning.js';
 // localStorage utility for managing study progress
 import { scheduleReview, srsKey, studyDay, validSrsRecord } from './spacedRepetition.js';
 import { defaultExamDate, validStudyRoadmap } from './studyRoadmap.js';
+import { createId } from './id.js';
+import { canonicalReviewKey } from './reviewQuestionIds.js';
+import { emptyReviewProgress, recordReviewResult, beginReview, answerReview, advanceReview, finishReview, closeReview, validReviewProgress } from './reviewProgress.js';
 
 const STORAGE_KEYS = {
   COMPLETED_QUESTIONS: 'n3vjit_completedQuestions',
@@ -14,6 +18,9 @@ const STORAGE_KEYS = {
   LAST_LESSON: 'n3vjit_lastLesson',
   SPACED_REPETITION: 'n3vjit_spacedRepetition',
   STUDY_ROADMAP: 'n3vjit_studyRoadmap',
+  POMODORO_LEARNING: 'n3vjit_pomodoroLearning',
+  MASTERY: 'n3vjit_mastery',
+  REVIEW: 'n3vjit_review',
 };
 
 let storageUserId = null;
@@ -51,6 +58,85 @@ const setItem = (key, value) => {
   }
 };
 
+export const getMasteryProgress = () => getItem(STORAGE_KEYS.MASTERY, { cards: {}, nodes: {} });
+export const saveMasteryProgress = value => { if (!validMasteryProgress(value)) throw new Error('Tiến độ học không hợp lệ.'); if (!setItem(STORAGE_KEYS.MASTERY, value)) throw new Error('Không thể lưu tiến độ trên thiết bị.'); };
+
+export const getReviewProgress = () => getItem(STORAGE_KEYS.REVIEW, emptyReviewProgress());
+
+// Commit related records together and notify sync only after all writes succeed.
+function setProgressItems(entries) {
+  if (!storageUserId) return;
+  for (const [key, value] of entries) if (!validators[key]?.(value)) throw new Error('Dữ liệu tiến độ không hợp lệ.');
+  const previous = entries.map(([key]) => [scopedKey(key), localStorage.getItem(scopedKey(key))]);
+  try {
+    entries.forEach(([key, value]) => localStorage.setItem(scopedKey(key), JSON.stringify(value)));
+  } catch {
+    previous.forEach(([key, value]) => { if (value === null) localStorage.removeItem(key); else localStorage.setItem(key, value); });
+    throw new Error('Không thể lưu tiến độ trên thiết bị. Chưa chốt kết quả kiểm tra.');
+  }
+  notifyProgressWrite();
+}
+
+const reviewOptions = (options = {}, previous = null) => ({ ...options,
+  now: options.now ?? Math.max(Date.now(), (Date.parse(previous?.updatedAt || '') || 0) + 1), updateId: options.updateId ?? createId() });
+const requireReviewUser = () => { if (!storageUserId) throw new Error('Đăng nhập để kiểm tra và lưu tiến độ.'); };
+
+export const recordQuestionResult = (section, questionId, correct, options = {}) => {
+  if (!storageUserId) return;
+  const progress = recordReviewResult(getReviewProgress(), `${section}:${questionId}`, correct, reviewOptions(options));
+  setProgressItems([[STORAGE_KEYS.REVIEW, progress]]);
+};
+
+export const startReviewTest = (settings, options = {}) => {
+  requireReviewUser();
+  const previous = getReviewProgress();
+  const progress = beginReview(previous, getMasteryProgress(), settings, reviewOptions(options, previous.session));
+  setProgressItems([[STORAGE_KEYS.REVIEW, progress]]);
+  return progress.session;
+};
+
+export const saveReviewAnswer = (sessionId, key, response, options = {}) => {
+  requireReviewUser();
+  const previous = getReviewProgress();
+  const progress = answerReview(previous, sessionId, key, response, reviewOptions(options, previous.session));
+  if (progress !== previous) setProgressItems([[STORAGE_KEYS.REVIEW, progress]]);
+  return progress.session;
+};
+
+export const finishReviewTest = (sessionId, options = {}) => {
+  requireReviewUser();
+  const previous = getReviewProgress();
+  const result = finishReview(previous, getMasteryProgress(), sessionId, reviewOptions(options, previous.session));
+  if (result.summary) setProgressItems([[STORAGE_KEYS.MASTERY, result.mastery], [STORAGE_KEYS.REVIEW, result.progress]]);
+  return result.summary;
+};
+
+export const advanceReviewQuestion = (sessionId, options = {}) => {
+  requireReviewUser();
+  const previous = getReviewProgress();
+  const progress = advanceReview(previous, sessionId, reviewOptions(options, previous.session));
+  if (progress !== previous) setProgressItems([[STORAGE_KEYS.REVIEW, progress]]);
+  return progress.session;
+};
+
+export const cancelReviewTest = (sessionId, options = {}) => {
+  requireReviewUser();
+  const previous = getReviewProgress();
+  const { now, updateId } = reviewOptions(options, previous.session);
+  setProgressItems([[STORAGE_KEYS.REVIEW, closeReview(previous, sessionId, now, updateId)]]);
+};
+
+// Legacy completion and mistake IDs stay untouched. Only new actual answers
+// create latest-result records; no inference/backfill from old progress.
+function saveQuestionOutcome(wrong, section, questionId, correct, options) {
+  const entries = [[STORAGE_KEYS.WRONG_QUESTIONS, wrong]];
+  const key = canonicalReviewKey(`${section}:${questionId}`);
+  if (storageUserId && (key.startsWith('renshuu4:') || key.startsWith('dokkai:'))) {
+    entries.push([STORAGE_KEYS.REVIEW, recordReviewResult(getReviewProgress(), key, correct, reviewOptions(options))]);
+  }
+  setProgressItems(entries);
+}
+
 // ===== Completed Questions =====
 
 export const getCompletedQuestions = () => {
@@ -82,7 +168,7 @@ export const getWrongQuestions = () => {
   return getItem(STORAGE_KEYS.WRONG_QUESTIONS, {});
 };
 
-export const addWrongQuestion = (section, questionId) => {
+export const addWrongQuestion = (section, questionId, options = {}) => {
   const wrong = getWrongQuestions();
   if (!wrong[section]) {
     wrong[section] = {};
@@ -92,10 +178,10 @@ export const addWrongQuestion = (section, questionId) => {
   }
   wrong[section][questionId].count += 1;
   wrong[section][questionId].correctStreak = 0;
-  setItem(STORAGE_KEYS.WRONG_QUESTIONS, wrong);
+  saveQuestionOutcome(wrong, section, questionId, false, options);
 };
 
-export const markWrongQuestionCorrect = (section, questionId) => {
+export const markWrongQuestionCorrect = (section, questionId, options = {}) => {
   const wrong = getWrongQuestions();
   if (wrong[section] && wrong[section][questionId]) {
     wrong[section][questionId].correctStreak += 1;
@@ -106,8 +192,8 @@ export const markWrongQuestionCorrect = (section, questionId) => {
         delete wrong[section];
       }
     }
-    setItem(STORAGE_KEYS.WRONG_QUESTIONS, wrong);
   }
+  saveQuestionOutcome(wrong, section, questionId, true, options);
 };
 
 export const getWrongQuestionCount = () => {
@@ -222,6 +308,14 @@ export const getSpacedRepetition = () => getItem(STORAGE_KEYS.SPACED_REPETITION,
 
 export const getStudyRoadmap = () => getItem(STORAGE_KEYS.STUDY_ROADMAP, null);
 
+export const getPomodoroLearning = () => getItem(STORAGE_KEYS.POMODORO_LEARNING, { cycles: [], events: [] });
+
+export const savePomodoroLearning = (progress) => {
+  if (!validPomodoroLearning(progress)) throw new Error('Dữ liệu học Pomodoro không hợp lệ.');
+  if (!setItem(STORAGE_KEYS.POMODORO_LEARNING, progress)) throw new Error('Chưa lưu được tiến độ Pomodoro.');
+  return progress;
+};
+
 export const ensureStudyRoadmap = (loginAt, now = Date.now()) => {
   if (!storageUserId || getStudyRoadmap()) return;
   const today = studyDay(now);
@@ -290,6 +384,11 @@ const isRecord = value => value !== null && typeof value === 'object' && !Array.
 const isStringArray = value => Array.isArray(value) && value.every(item => typeof item === 'string');
 const isCount = value => Number.isInteger(value) && value >= 0;
 const isScore = value => typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 10;
+const validPomodoroLearning = value => isRecord(value) && Array.isArray(value.cycles) && value.cycles.every(cycle =>
+  isRecord(cycle) && typeof cycle.id === 'string' && typeof cycle.startedAt === 'string' &&
+  (cycle.completedAt === null || typeof cycle.completedAt === 'string')) && Array.isArray(value.events) && value.events.every(event =>
+  isRecord(event) && typeof event.id === 'string' && typeof event.unitId === 'string' && typeof event.cycleId === 'string' &&
+  ['quiz', 'reading', 'flashcard'].includes(event.contentType) && typeof event.correct === 'boolean' && typeof event.at === 'string' && isCount(event.dueAtStep));
 const isMockAttempt = item => {
   if (item.mode !== 'mock-exam') return true;
   const parts = ['reading', 'passages', 'listening', 'writing'];
@@ -308,6 +407,9 @@ const isMockAttempt = item => {
 const validators = {
   [STORAGE_KEYS.SPACED_REPETITION]: value => isRecord(value) && Object.values(value).every(validSrsRecord),
   [STORAGE_KEYS.STUDY_ROADMAP]: validStudyRoadmap,
+  [STORAGE_KEYS.POMODORO_LEARNING]: validPomodoroLearning,
+  [STORAGE_KEYS.MASTERY]: validMasteryProgress,
+  [STORAGE_KEYS.REVIEW]: validReviewProgress,
   [STORAGE_KEYS.COMPLETED_QUESTIONS]: value => isRecord(value) && Object.values(value).every(isStringArray),
   [STORAGE_KEYS.WRONG_QUESTIONS]: value => isRecord(value) && Object.values(value).every(section =>
     isRecord(section) && Object.values(section).every(item => isRecord(item) && isCount(item.count) && isCount(item.correctStreak))),

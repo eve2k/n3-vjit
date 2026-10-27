@@ -574,6 +574,22 @@ input, select, textarea { accent-color: var(--accent); }
 .admin-users-table td small { display: block; color: var(--muted); font-size: 11px; margin-top: 3px; }
 .admin-users-table .btn { white-space: nowrap; font-size: 12px; padding: 8px 10px; }
 .admin-role-badge { display: inline-flex; align-items: center; gap: 5px; color: var(--accent); font-weight: 650; }
+.account-admin-link { margin-top: 9px; font-size: 12px; }
+.account-admin-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+.pomodoro-course-intro { margin: 20px 0; padding: 28px; }
+.pomodoro-course-intro h2 { margin: 14px 0 8px; font-size: 21px; font-weight: 700; }
+.pomodoro-course-intro > p { max-width: 760px; margin: 9px 0; color: var(--muted); line-height: 1.7; }
+.pomodoro-course-intro .btn { margin-top: 14px; }
+.pomodoro-course-progress { display: grid; grid-template-columns: repeat(3, auto) minmax(120px, 1fr); align-items: center; gap: 12px 22px; margin: 18px 0; padding: 15px 18px; }
+.pomodoro-course-progress > div:not(.progress-track) { display: flex; align-items: baseline; gap: 5px; color: var(--muted); font-size: 12px; }
+.pomodoro-course-progress strong { color: var(--text); font-size: 17px; }
+.pomodoro-learning-card { position: relative; }
+.pomodoro-resting { pointer-events: none; opacity: .68; }
+.pomodoro-rest-overlay { position: sticky; top: 8px; z-index: 2; margin: -6px 0 14px; padding: 10px 14px; border-radius: 8px; background: var(--accent-soft); color: var(--accent); text-align: center; font-size: 13px; font-weight: 650; }
+@media (max-width: 700px) {
+  .pomodoro-course-progress { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pomodoro-course-progress .progress-track { grid-column: 1 / -1; }
+}
 .admin-confirmed { color: var(--muted); }
 .admin-confirmed.is-confirmed { color: var(--ok); }
 .admin-list-count { padding: 12px 16px; color: var(--muted); font-size: 11px; }

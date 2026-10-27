@@ -61,7 +61,8 @@ export default function DokkaiView() {
   })
 
   return (
-    <div className="mx-auto max-w-6xl p-4 pb-24">
+    <div className="page-shell content-page dokkai-page">
+      <div className="page-heading"><div><p className="eyebrow">KỸ NĂNG · 読解</p><h1>Đọc hiểu</h1><p className="page-description">Đọc đoạn văn, tìm thông tin và luyện cách suy luận theo ngữ cảnh.</p></div></div>
       <div className="mb-3 flex flex-wrap gap-2">
         {dokkai.map((p) => (
           <button
