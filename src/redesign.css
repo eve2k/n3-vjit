@@ -434,7 +434,6 @@ input:not([type="checkbox"]):not([type="radio"]), select, textarea { border-colo
 /* Compact winding roadmap matching the supplied C2J study sketch. */
 .roadmap-page { width:min(100%,752px); max-width:752px; padding-top:18px; }
 .roadmap-compact-head h1 { margin:0 0 3px; font-size:27px; line-height:1.2; letter-spacing:-.035em; }
-.roadmap-compact-head p { margin:0 0 16px; color:var(--muted); font-size:12px; line-height:1.55; }
 .roadmap-tabs { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:5px; margin-bottom:8px; }
 .roadmap-tabs button { display:flex; min-width:0; min-height:48px; flex-direction:column; justify-content:center; align-items:center; gap:2px; padding:5px 2px; border:1px solid var(--line); border-radius:8px; background:var(--card); color:var(--text); }
 .roadmap-tabs button:hover { border-color:var(--accent); }
@@ -476,7 +475,6 @@ input:not([type="checkbox"]):not([type="radio"]), select, textarea { border-colo
 @media(max-width:560px) {
   .roadmap-page { padding-top:14px; }
   .roadmap-compact-head h1 { font-size:23px; }
-  .roadmap-compact-head p { font-size:10px; }
   .roadmap-tabs { gap:3px; }
   .roadmap-tabs button { min-height:43px; }
   .roadmap-tabs b { font-size:8px; }
@@ -485,10 +483,8 @@ input:not([type="checkbox"]):not([type="radio"]), select, textarea { border-colo
 }
 
 /* Cleaner roadmap hierarchy and mobile navigation behavior. */
-.roadmap-compact-head { margin:0 auto; }
-.roadmap-eyebrow { display:inline-block; margin:0 0 6px; color:var(--accent); font-size:9px; font-weight:800; letter-spacing:.12em; }
+.roadmap-compact-head { margin:0 auto 16px; }
 .roadmap-compact-head h1 { font-size:30px; }
-.roadmap-compact-head p { max-width:640px; margin-top:6px; font-size:12px; }
 .roadmap-tabs { padding:3px; border:1px solid var(--line); border-radius:12px; background:color-mix(in srgb,var(--card) 72%,var(--bg)); }
 .roadmap-tabs button { min-height:50px; border-radius:9px; }
 .roadmap-tabs b { font-size:10px; }
@@ -770,7 +766,6 @@ input:not([type="checkbox"]):not([type="radio"]), select, textarea { border-colo
 .map-checkpoint.selected { stroke-width:1.8px; }
 .map-node-group:focus-visible .map-lesson-node, .map-node-group:focus-visible .map-checkpoint, .map-node-group:focus-visible .map-end { stroke:var(--accent); stroke-width:3px; }
 .roadmap-compact-head { display:flex; flex-wrap:wrap; align-items:center; column-gap:14px; }
-.roadmap-eyebrow, .roadmap-compact-head p { flex-basis:100%; }
 .roadmap-compact-head h1 { margin-right:auto; }
 .roadmap-countdown { margin:0; }
 @media(prefers-reduced-motion:reduce) { .map-node-group[aria-pressed="true"] .map-lesson-node, .map-node-group[aria-pressed="true"] .map-checkpoint, .map-node-group[aria-pressed="true"] .map-end { transition:none; } }
