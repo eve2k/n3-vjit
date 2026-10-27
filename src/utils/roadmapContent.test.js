@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { weakMasteryNodes, weakMasteryCount, stageProgress, continueLessonIndex, stages, lessonQuestions, stageQuestions } from './roadmapContent.js'
+import { usableQuestion } from './questionUsability.js'
 
 test('vocabulary nodes keep source boundaries and cover every question exactly once', () => {
   const stage = stages.find(stage => stage.id === 'vocab')
@@ -44,6 +45,15 @@ test('node đã qua nhưng chưa thành thạo vẫn có thể tiếp tục; ch�
   assert.equal(continueLessonIndex(stages[3], {}, {}), 0)
 })
 function stageQuestionsForFirst() { return stages[0].source.length ? Array.from({ length: 5 }, (_, i) => ({ section: 'renshuu3', id: `r3_q${i+1}` })) : [] }
+
+test('câu trùng lựa chọn không chặn hoàn tất chặng ngữ pháp', () => {
+  const grammar = stages.find(stage => stage.id === 'grammar')
+  const usable = stageQuestions(grammar).filter(usableQuestion)
+  assert.equal(usable.length, 47)
+  assert.equal(usable.some(question => question.id === 'r4_q35'), false)
+  const completed = { renshuu4: usable.map(question => question.id) }
+  assert.equal(stageProgress(grammar, completed).passed, grammar.lessons.length)
+})
 
 
 test('chỉ thẻ đã gặp ở bậc 0 hoặc 1 được tính cần ôn', () => {

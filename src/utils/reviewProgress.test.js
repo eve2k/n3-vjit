@@ -36,7 +36,7 @@ test('finish deletes all session items/answers, persists one latest result and i
   assert.equal(finished.progress.session.data, null)
   assert.equal(JSON.stringify(finished.progress).includes('"items"'), false)
   assert.equal(JSON.stringify(finished.progress).includes('"response"'), false)
-  assert.deepEqual(finished.summary, { total: 1, correct: 0, wrongKeys: [key] })
+  assert.deepEqual(finished.summary, { kind: 'mastered', total: 1, correct: 0, wrongKeys: [key] })
   assert.equal(finished.mastery.cards[key].level, 2)
   assert.equal(finished.mastery.cards[key].needsRecheck, true)
   assert.equal(validReviewProgress(finished.progress), true)
@@ -53,10 +53,24 @@ test('wrong cards enter the shared weak count and can only be selected via retry
   const retried = beginReview(finished.progress, finished.mastery, { ...settings, retryKeys: [key] }, options(4))
   const answered = answerReview(retried, 'id-4', key, question.correctAnswer, options(5))
   const passed = finishReview(answered, finished.mastery, 'id-4', options(6))
+  assert.equal(passed.summary.kind, 'retry')
   assert.equal(passed.mastery.cards[key].level, 3)
   assert.equal(passed.mastery.cards[key].needsRecheck, undefined)
   assert.equal(weakMasteryCount(passed.mastery), 0)
   assert.equal(Object.keys(passed.progress.results).length, 1)
+})
+
+test('finishing with a slow device clock advances both card and result timestamps', () => {
+  const future = now + 60_000
+  const mastery = mastered()
+  mastery.cards[key].updatedAt = new Date(future).toISOString()
+  const active = beginReview(emptyReviewProgress(), mastery, settings, options(1))
+  const answered = answerReview(active, 'id-1', key, wrong, options(2))
+  const finished = finishReview(answered, mastery, 'id-1', options(3))
+  assert.equal(finished.mastery.cards[key].level, 2)
+  assert.equal(Date.parse(finished.mastery.cards[key].updatedAt), future + 1)
+  assert.equal(finished.progress.results[key].answeredAt, finished.mastery.cards[key].updatedAt)
+  assert.equal(validReviewProgress(finished.progress), true)
 })
 
 test('written self-correction only follows submission and commits once as correct', () => {

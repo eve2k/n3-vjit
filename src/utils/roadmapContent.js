@@ -1,5 +1,6 @@
 import { QUIZ_SECTIONS, dokkai } from '../data/index.js'
 import { needsConsolidation, needsRecheck } from './masteryLearning.js'
+import { usableQuestion } from './questionUsability.js'
 
 const section = id => QUIZ_SECTIONS.find(item => item.id === id)
 const questionPool = id => id === 'dokkai'
@@ -45,7 +46,7 @@ export function weakMasteryNodes(progress) {
   const cards = progress?.cards || {}
   const sessions = progress?.nodes || {}
   return stages.filter(masteryStage).flatMap(stage => stage.lessons.flatMap((title, index) => {
-    const questions = lessonQuestions(stage, index)
+    const questions = lessonQuestions(stage, index).filter(usableQuestion)
     const started = sessions[`${stage.id}:${nodeId(index)}`] || questions.some(q => cards[`${q.section}:${q.id}`])
     if (!started) return []
     const weak = questions.filter(q => needsConsolidation(cards[`${q.section}:${q.id}`]))
@@ -71,7 +72,7 @@ export function stageProgress(stage, completed = {}, mastery = {}) {
   let unseen = 0
   let total = 0
   for (let index = 0; index < stage.lessons.length; index++) {
-    const questions = lessonQuestions(stage, index)
+    const questions = lessonQuestions(stage, index).filter(usableQuestion)
     if (!questions.length) continue
     if (masteryStage(stage)) {
       const levels = questions.map(q => cards[`${q.section}:${q.id}`]?.level ?? 0)
@@ -91,14 +92,14 @@ export function continueLessonIndex(stage, completed = {}, mastery = {}) {
   const sessions = mastery.nodes || {}
   if (masteryStage(stage)) {
     const ongoing = stage.lessons.map((_, index) => {
-      const questions = lessonQuestions(stage, index)
+      const questions = lessonQuestions(stage, index).filter(usableQuestion)
       const session = sessions[`${stage.id}:${nodeId(index)}`]
       return session && questions.length && questions.some(q => (cards[`${q.section}:${q.id}`]?.level ?? 0) < 3) ? { index, updatedAt: session.updatedAt || '' } : null
     }).filter(Boolean).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt) || a.index - b.index)
     if (ongoing.length) return ongoing[0].index
   }
   const index = stage.lessons.findIndex((_, lessonIndex) => {
-    const questions = lessonQuestions(stage, lessonIndex)
+    const questions = lessonQuestions(stage, lessonIndex).filter(usableQuestion)
     if (!questions.length) return false
     if (!masteryStage(stage)) return questions.some(q => !(completed[q.section] || []).includes(q.id))
     const levels = questions.map(q => cards[`${q.section}:${q.id}`]?.level ?? 0)

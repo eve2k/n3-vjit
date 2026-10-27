@@ -106,15 +106,16 @@ function ReviewResult({ result }) {
   const navigate = useNavigate()
   const stage = stages.find(stage => stage.id === result.stageId)
   const wrong = reviewCatalog(stage.id).filter(q => result.wrongKeys.includes(q.key))
+  const canRetry = result.kind === 'mastered' && wrong.length > 0
   const retry = () => navigate(`/review?tab=mastered&stage=${stage.id}&setup=1`, { state: { retryKeys: result.wrongKeys } })
-  const primary = () => wrong.length ? retry() : navigate(`/review?tab=mastered&stage=${stage.id}`)
+  const primary = () => canRetry ? retry() : navigate(result.kind === 'retry' ? '/review' : `/review?tab=mastered&stage=${stage.id}`)
   useStudyShortcuts({ mode: 'preview', onStart: primary, onExit: () => navigate('/review') })
   return <div className="page-shell review-result-page"><section className="panel review-result">
     <div className="review-result-icon">{wrong.length ? <ClipboardResult/> : <Trophy size={32}/>}</div><p className="eyebrow">{stage.title} · KẾT QUẢ KIỂM TRA</p><h1>{wrong.length ? 'Cùng củng cố thêm nhé' : 'Bạn nhớ rất tốt!'}</h1>
     <div className="review-score-grid"><div><strong>{result.correct}</strong><span>Câu đúng</span></div><div><strong>{result.total - result.correct}</strong><span>Câu sai</span></div></div>
     <SyncStatus/>
     {wrong.length > 0 && <section className="review-result-wrong"><h2>Các thẻ cần ôn lại</h2><ul>{wrong.map(q => <li key={q.key}><p className="jp"><QuestionText text={q.questionText}/></p><p className="review-card-answer">Đáp án: <span className="jp"><QuestionText text={correctAnswerText(q)}/></span></p></li>)}</ul></section>}
-    <div className="review-actions"><button className="btn btn-primary" aria-keyshortcuts="Enter" onClick={primary}>{wrong.length ? <><RotateCcw size={16}/> Ôn lại các thẻ sai</> : 'Về danh sách thẻ'}</button><Link className="btn btn-secondary" to="/review" aria-keyshortcuts="Escape">Về ôn tập</Link></div>
+    <div className="review-actions"><button className="btn btn-primary" aria-keyshortcuts="Enter" onClick={primary}>{canRetry ? <><RotateCcw size={16}/> Ôn lại các thẻ sai</> : result.kind === 'retry' ? 'Đến Cần củng cố' : 'Về danh sách thẻ'}</button><Link className="btn btn-secondary" to="/review" aria-keyshortcuts="Escape">Về ôn tập</Link></div>
   </section></div>
 }
 

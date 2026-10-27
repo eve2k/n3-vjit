@@ -9,6 +9,7 @@ import { getMasteryProgress, saveMasteryProgress } from '../utils/storage.js'
 import useStudyShortcuts from '../hooks/useStudyShortcuts.js'
 import { speakJapanese } from '../utils/tts.js'
 import { questionInstruction, plainQuestionText } from '../utils/questionMarkup.js'
+import { usableQuestion } from '../utils/questionUsability.js'
 import SpeakButton from './SpeakButton.jsx'
 
 const updateId = () => globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`
@@ -36,10 +37,10 @@ function MasterySession({ stageId, nodeId, lesson }) {
   const [error, setError] = useState('')
   useEffect(() => { const refresh = () => setProgress(getMasteryProgress()); window.addEventListener('n3vjit:progress', refresh); return () => window.removeEventListener('n3vjit:progress', refresh) }, [])
   useEffect(() => { if (helpOpen) helpCloseRef.current?.focus() }, [helpOpen])
-  const all = lesson.stage.lessons.flatMap((_, index) => lessonQuestions(lesson.stage, index))
+  const all = lesson.stage.lessons.flatMap((_, index) => lessonQuestions(lesson.stage, index)).filter(usableQuestion)
   const questionById = Object.fromEntries(all.map(q => [cardKey(q), q]))
-  const keys = lesson.questions.map(cardKey)
-  const oldKeys = lesson.stage.lessons.slice(0, lesson.index).flatMap((_, index) => lessonQuestions(lesson.stage, index).map(cardKey))
+  const keys = lesson.questions.filter(usableQuestion).map(cardKey)
+  const oldKeys = lesson.stage.lessons.slice(0, lesson.index).flatMap((_, index) => lessonQuestions(lesson.stage, index).filter(usableQuestion).map(cardKey))
   const session = progress.nodes[key]
   const status = nodeStatus(keys, progress.cards, session?.completedRounds || 0)
   const save = (next) => { try { saveMasteryProgress(next); setProgress(next); setError(''); return true } catch (e) { setError(e.message); return false } }
@@ -66,6 +67,7 @@ function MasterySession({ stageId, nodeId, lesson }) {
     onAdvance: session?.feedback ? next : null,
     onSpeak: question ? () => speakJapanese(plainQuestionText(question.questionText)) : null,
   })
+  if (!keys.length) return <section className="page-shell"><p>Bài học chưa có câu hỏi hợp lệ để luyện. Hãy quay lại lộ trình.</p><Link to="/" className="btn btn-secondary">Về lộ trình</Link></section>
   if (session && !session.feedback && session.queue.length === 0) return <Navigate to={`/study/${stageId}/${nodeId}/summary`} replace />
   return <div className="page-shell mastery-study">
     <Link className="text-link" aria-keyshortcuts="Escape" to={`/study/${stageId}/${nodeId}`}><ArrowLeft size={16}/> Trở về bài học</Link>

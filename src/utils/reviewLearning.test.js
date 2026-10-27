@@ -3,19 +3,22 @@ import assert from 'node:assert/strict'
 import { applyReviewAnswer, answerCard, createRound, needsConsolidation, validMasteryProgress } from './masteryLearning.js'
 import { reviewCatalog, eligibleReviewCards, selectReviewCards, createReviewItems, gradeReviewAnswer, normalizeWrittenAnswer } from './reviewLearning.js'
 import { READING_ID_MAP, canonicalReviewKey, latestAnswer } from './reviewQuestionIds.js'
+import { usableQuestion } from './questionUsability.js'
 
 const now = Date.parse('2026-10-27T00:00:00Z')
 const card = (level = 3) => ({ level, lastResult: 'correct', updatedAt: new Date(now).toISOString(), updateId: 'initial' })
 const result = (correct, time = now, updateId = 'answer') => ({ correct, answeredAt: new Date(time).toISOString(), updateId, source: 'practice' })
 const random = () => .25
 
-test('review wrong demotes once; correct keeps level; duplicate/old updates cannot demote again', () => {
+test('review wrong demotes once; correct keeps level; duplicate updates cannot demote again', () => {
   const wrong = applyReviewAnswer(card(), false, now + 1, 'wrong')
   assert.equal(wrong.level, 2)
   assert.equal(wrong.needsRecheck, true)
   assert.equal(needsConsolidation(wrong), true)
   assert.equal(applyReviewAnswer(wrong, false, now + 1, 'wrong'), wrong)
-  assert.equal(applyReviewAnswer(wrong, false, now - 1, 'stale'), wrong)
+  const slowClock = applyReviewAnswer(wrong, false, now - 1, 'slow-clock')
+  assert.equal(slowClock.level, 1)
+  assert.equal(Date.parse(slowClock.updatedAt), Date.parse(wrong.updatedAt) + 1)
   assert.equal(applyReviewAnswer(card(), true, now + 1, 'correct').level, 3)
   assert.equal(applyReviewAnswer(card(0), false, now + 1, 'wrong').level, 0)
   assert.equal(wrong.lastReviewedAt, new Date(now + 1).toISOString())
@@ -45,7 +48,23 @@ test('mastered pool only accepts level 3; retry pool includes flagged level 2', 
   const progress = { cards, nodes: {} }
   assert.deepEqual(eligibleReviewCards('kanji', progress).map(q => q.key), [questions[3].key])
   assert.deepEqual(eligibleReviewCards('kanji', progress, {}, { retryKeys: [questions[2].key] }).map(q => q.key), [questions[2].key])
+  assert.deepEqual(eligibleReviewCards('kanji', progress, {}, { retryKeys: [questions[0].key, questions[1].key] }), [])
   assert.equal(eligibleReviewCards('kanji', progress, {}, { lessonIds: [] }).length, 0)
+})
+
+test('catalog is stable per stage and duplicate choices are unusable in tests and learning rounds', () => {
+  assert.equal(reviewCatalog('kanji'), reviewCatalog('kanji'))
+  assert.equal(reviewCatalog('reading'), reviewCatalog('reading'))
+  assert.notEqual(reviewCatalog('kanji'), reviewCatalog('reading'))
+  const duplicate = reviewCatalog('grammar').find(q => q.id === 'r4_q35')
+  assert.equal(usableQuestion(duplicate), false)
+  assert.equal(eligibleReviewCards('grammar', {}, { [duplicate.key]: result(true) }).some(q => q.id === 'r4_q35'), false)
+  assert.throws(() => createReviewItems([duplicate], 'multiple-choice', 'grammar', random), /không có đủ/i)
+  const synthetic = { ...reviewCatalog('kanji')[0], key: 'renshuu3:duplicate', options: { A: 'Ａ', B: 'A' }, correctAnswer: 'A' }
+  assert.equal(usableQuestion(synthetic), false)
+  const own = [synthetic, reviewCatalog('kanji')[0]].filter(usableQuestion).map(q => q.key)
+  const old = [synthetic, reviewCatalog('kanji')[1]].filter(usableQuestion).map(q => q.key)
+  assert.deepEqual(createRound(own, old, {}, 1, 0, now, 'round').queue, own)
 })
 
 test('latest grammar/reading correctness is explicit, not inferred from completion or legacy mistakes', () => {

@@ -8,6 +8,7 @@ import { getCompletedQuestions, getMasteryProgress, getStudyRoadmap, markQuestio
 import { cardKey, nodeStatus, LEVEL_LABELS } from '../utils/masteryLearning.js'
 import { useAuth } from '../context/authContext.js'
 import { studyDay } from '../utils/spacedRepetition.js'
+import { usableQuestion } from '../utils/questionUsability.js'
 import { daysBetween, DEFAULT_EXAM_DATE, formatStudyDay } from '../utils/studyRoadmap.js'
 
 
@@ -37,7 +38,7 @@ export default function StudyRoadmap() {
   const picked = nodes[selectedNode] || nodes[0]
   const completedIds = completed
   const checkpointQuestions = stageQuestions(stage)
-  const selectedQuestions = picked.kind === 'lesson' ? lessonQuestions(stage, picked.index) : checkpointQuestions
+  const selectedQuestions = (picked.kind === 'lesson' ? lessonQuestions(stage, picked.index) : checkpointQuestions).filter(usableQuestion)
   const selectedMastery = picked.kind === 'lesson' && masteryStage(stage) ? nodeStatus(selectedQuestions.map(cardKey), mastery.cards, mastery.nodes[`${stage.id}:${nodeId(picked.index)}`]?.completedRounds || 0) : null
   const summary = stageProgress(stage, completedIds, mastery)
   const weakCount = weakMasteryCount(mastery)
@@ -50,7 +51,7 @@ export default function StudyRoadmap() {
   const selectedDone = picked.kind === 'lesson' ? selectedQuestions.filter(q => (completedIds[q.section] || []).includes(q.id)).length : 0
 
   const start = (targetStage, lessonIndex, checkpoint = false) => {
-    const pool = checkpoint ? stageQuestions(targetStage) : lessonQuestions(targetStage, lessonIndex)
+    const pool = (checkpoint ? stageQuestions(targetStage) : lessonQuestions(targetStage, lessonIndex)).filter(usableQuestion)
     if (!pool.length) return
     setSession({ stage: targetStage, lessonIndex, checkpoint, questions: pool })
     setSelectedNode(selectedNode)

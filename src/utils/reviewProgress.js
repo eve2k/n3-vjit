@@ -1,4 +1,4 @@
-import { applyReviewAnswer, newerMasteryRecord } from './masteryLearning.js'
+import { applyReviewAnswer, newerMasteryRecord, nextCardTime } from './masteryLearning.js'
 import { eligibleReviewCards, selectReviewCards, createReviewItems, gradeReviewAnswer, reviewCatalog, REVIEW_MODES, supportsWritten } from './reviewLearning.js'
 import { canonicalReviewKey, latestAnswerEntry } from './reviewQuestionIds.js'
 
@@ -124,13 +124,15 @@ export function finishReview(progress, mastery, sessionId, { now, updateId } = {
     const answer = session.data.answers[item.key]
     if (!answer) throw new Error('Hãy trả lời đủ các câu trước khi hoàn thành.')
     const correct = gradeReviewAnswer(item, questions.get(item.key), answer.response, answer.selfCorrected)
-    next = recordReviewResult(next, item.key, correct, { now, updateId,
+    const previousResult = latestAnswerEntry(next.results, item.key)?.value
+    const resultTime = nextCardTime({ updatedAt: previousResult?.answeredAt }, nextCardTime(cards[item.key], now))
+    next = recordReviewResult(next, item.key, correct, { now: resultTime, updateId,
       source: session.data.kind === 'retry' ? 'review-retry' : 'review-test', selfCorrected: answer.selfCorrected })
-    if (supportsWritten(session.data.stageId) && cards[item.key]) cards[item.key] = applyReviewAnswer(cards[item.key], correct, now, updateId)
+    if (supportsWritten(session.data.stageId) && cards[item.key]) cards[item.key] = applyReviewAnswer(cards[item.key], correct, resultTime, updateId)
     return { key: item.key, correct }
   })
-  return { progress: closeReview(next, sessionId, now, updateId), mastery: { ...mastery, cards },
-    summary: { total: outcomes.length, correct: outcomes.filter(item => item.correct).length,
+  return { progress: closeReview(next, sessionId, nextCardTime(session, now), updateId), mastery: { ...mastery, cards },
+    summary: { kind: session.data.kind, total: outcomes.length, correct: outcomes.filter(item => item.correct).length,
       wrongKeys: outcomes.filter(item => !item.correct).map(item => item.key) } }
 }
 

@@ -4,6 +4,10 @@ const isObject = value => value && typeof value === 'object' && !Array.isArray(v
 const count = value => Number.isSafeInteger(value) && value >= 0
 const date = value => typeof value === 'string' && Number.isFinite(Date.parse(value))
 const stamp = (now, updateId) => ({ updatedAt: new Date(now).toISOString(), updateId })
+export const nextCardTime = (card, now) => {
+  const previous = Date.parse(card?.updatedAt)
+  return Math.max(now, Number.isFinite(previous) ? previous + 1 : now)
+}
 
 export const needsRecheck = card => card?.level === 2 && card.needsRecheck === true
 export const needsConsolidation = card => Boolean(card && (card.level < 2 || needsRecheck(card)))
@@ -12,9 +16,9 @@ export const needsConsolidation = card => Boolean(card && (card.level < 2 || nee
 // a successful recovery restores mastery; a second failure returns it to level 1.
 export function applyReviewAnswer(card, correct, now, updateId) {
   if (!card || typeof correct !== 'boolean') throw new Error('Thẻ kiểm tra không hợp lệ.')
-  const nextStamp = stamp(now, updateId)
+  const nextStamp = stamp(nextCardTime(card, now), updateId)
   if (!updateId) throw new Error('Thiếu ID lượt kiểm tra.')
-  if (card.updateId === updateId || newerMasteryRecord(card, nextStamp) === card) return card
+  if (card.updateId === updateId) return card
   const { needsRecheck: _flag, ...previous } = card
   const level = correct ? (needsRecheck(card) ? 3 : card.level) : Math.max(0, card.level - 1)
   return { ...previous, level, lastResult: correct ? 'correct' : 'wrong', lastReviewedAt: nextStamp.updatedAt,
@@ -47,8 +51,9 @@ export function answerCard(session, cards, correct, now, updateId) {
   const flagged = needsRecheck(cards[key])
   const level = correct ? (flagged ? 3 : Math.min(3, old + (session.advanced.includes(key) ? 0 : 1))) : Math.max(0, old - 1)
   const { needsRecheck: _flag, ...previous } = cards[key] || {}
+  const cardStamp = stamp(nextCardTime(cards[key], now), updateId)
   const nextCards = { ...cards, [key]: { ...previous, level, lastResult: correct ? 'correct' : 'wrong',
-    ...(flagged ? { lastReviewedAt: new Date(now).toISOString() } : {}), ...stamp(now, updateId) } }
+    ...(flagged ? { lastReviewedAt: cardStamp.updatedAt } : {}), ...cardStamp } }
   const queue = session.queue.slice(1)
   const requeues = { ...session.requeues }
   if (!correct && (requeues[key] || 0) < 2) {

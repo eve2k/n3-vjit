@@ -11,10 +11,11 @@ import { getMistakeQuestions, getSectionProgress, gradeExam } from '../utils/lea
 import { useAuth } from '../context/authContext.js'
 import useQuestionShortcuts from '../hooks/useQuestionShortcuts.js'
 import { createId } from '../utils/id.js'
+import { usableQuestion } from '../utils/questionUsability.js'
 
 function sectionQuestions(sectionId, mistakeMode) {
   const questions = mistakeMode ? getMistakeQuestions(getWrongQuestions()) : allQuizQuestions
-  return sectionId === 'all' || mistakeMode ? questions : questions.filter(question => question.section === sectionId)
+  return (sectionId === 'all' || mistakeMode ? questions : questions.filter(question => question.section === sectionId)).filter(usableQuestion)
 }
 
 export default function QuizEngine({ mistakeMode = false, focusMode = false }) {
@@ -97,8 +98,9 @@ export default function QuizEngine({ mistakeMode = false, focusMode = false }) {
     {notice && <p className="notice notice-error" role="alert">{notice}</p>}
     {!started && focusMode && <section className="study-space-catalog" aria-label="Chọn phần học">
       {quizSections.map((section, sectionIndex) => {
-        const completed = getSectionProgress(section, getCompletedQuestions())
-        const total = section.questions.length
+        const usable = section.questions.filter(usableQuestion)
+        const completed = getSectionProgress({ ...section, questions: usable }, getCompletedQuestions())
+        const total = usable.length
         return <button key={section.id} type="button" className="study-part-card" onClick={() => startSession(section.id)}>
           <span className="study-part-index">{String(sectionIndex + 1).padStart(2, '0')}</span>
           <span className="study-part-copy"><span className="eyebrow jp">{section.label}</span><strong>{section.title.replace(/^.*? · /, '')}</strong><small>{completed}/{total} câu đã làm</small><span className="progress-track"><span style={{ width: `${completed / total * 100}%` }} /></span></span>

@@ -2,6 +2,7 @@ import { allQuizQuestions, dokkai, choukai, kaiwaSakubun } from '../data/index.j
 import { gradeExam } from './learning.js'
 import { addWrongQuestion, getQuizHistory, markDokkaiCompleted, markQuestionCompleted, markWrongQuestionCorrect, saveQuizAttempt } from './storage.js'
 import { createId } from './id.js'
+import { usableQuestion } from './questionUsability.js'
 
 export const EXAM_PASS_SCORE = 3
 export const EXAM_MAX_SCORE = 10
@@ -31,8 +32,8 @@ function sample(items, count, random) {
 export function createMockExam(random = Math.random) {
   return {
     id: createId(),
-    reading: sample(allQuizQuestions, 35, random),
-    passages: sample(dokkai, 2, random),
+    reading: sample(allQuizQuestions.filter(usableQuestion), 35, random),
+    passages: sample(dokkai.filter(passage => passage.questions.every(usableQuestion)), 2, random),
     listening: sample(listeningBank, 30, random),
     writing: sample(kaiwaSakubun.sakubun, 1, random)[0],
   }

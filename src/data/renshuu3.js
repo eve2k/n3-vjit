@@ -479,7 +479,7 @@ export const renshuu3 = [
     "id": "r3_q29",
     "section": "renshuu3",
     "questionNumber": 29,
-    "questionText": "誰も 彼の話を ＿＿＿＿うたがわなかった。",
+    "questionText": "誰も 彼の話を [[うたがわ]]なかった。",
     "highlightWord": "疑わ",
     "options": {
       "A": "質わ",
@@ -496,7 +496,7 @@ export const renshuu3 = [
     "id": "r3_q30",
     "section": "renshuu3",
     "questionNumber": 30,
-    "questionText": "喫茶店で コーヒーを ＿＿＿＿ちゅうもんした。",
+    "questionText": "喫茶店で コーヒーを [[ちゅうもん]]した。",
     "highlightWord": "注文",
     "options": {
       "A": "中問",
@@ -530,7 +530,7 @@ export const renshuu3 = [
     "id": "r3_q32",
     "section": "renshuu3",
     "questionNumber": 32,
-    "questionText": "クレジットカードの ＿＿＿＿ に サインをした。",
+    "questionText": "クレジットカードの [[りょうしゅうしょ]] に サインをした。",
     "highlightWord": "領収書",
     "options": {
       "A": "領収書",
@@ -615,7 +615,7 @@ export const renshuu3 = [
     "id": "r3_q37",
     "section": "renshuu3",
     "questionNumber": 37,
-    "questionText": "卒業後 一番＿＿＿＿なことは 就職です。",
+    "questionText": "卒業後 一番[[しんぱい]]なことは 就職です。",
     "highlightWord": "心配",
     "options": {
       "A": "心倍",
@@ -649,7 +649,7 @@ export const renshuu3 = [
     "id": "r3_q39",
     "section": "renshuu3",
     "questionNumber": 39,
-    "questionText": "サラダを 冷蔵庫で ＿＿＿＿ おきましょう。",
+    "questionText": "サラダを 冷蔵庫で [[ひやして]] おきましょう。",
     "highlightWord": "冷やして",
     "options": {
       "A": "冷やして",
@@ -666,7 +666,7 @@ export const renshuu3 = [
     "id": "r3_q40",
     "section": "renshuu3",
     "questionNumber": 40,
-    "questionText": "＿＿＿＿ を はかりで 量りましょう。",
+    "questionText": "[[ざいりょう]] を はかりで 量りましょう。",
     "highlightWord": "材料",
     "options": {
       "A": "資料",
@@ -700,7 +700,7 @@ export const renshuu3 = [
     "id": "r3_q42",
     "section": "renshuu3",
     "questionNumber": 42,
-    "questionText": "姉は 必要な＿＿＿＿ 名前を 紙に書いてくれた。",
+    "questionText": "姉は 必要な[[しなもの]]の 名前を 紙に書いてくれた。",
     "highlightWord": "品物",
     "options": {
       "A": "呂物",

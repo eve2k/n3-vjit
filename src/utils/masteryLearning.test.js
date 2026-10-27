@@ -34,6 +34,15 @@ test('gộp trạng thái theo thời điểm', () => {
   const newer = { ...cards.a, level: 2, updatedAt: new Date(time + 1).toISOString() }
   assert.equal(mergeMasteryProgress({ cards: { a: cards.a } }, { cards: { a: newer } }).cards.a.level, 2)
 })
+test('đồng hồ chậm vẫn tạo bản thẻ mới hơn', () => {
+  const future = time + 60_000
+  const previous = { ...cards.a, updatedAt: new Date(future).toISOString() }
+  const session = createRound(['a'], [], { a: previous }, 1, 0, future, 'start')
+  const answer = answerCard(session, { a: previous }, true, time, 'slow-clock')
+  assert.equal(answer.cards.a.level, 1)
+  assert.equal(Date.parse(answer.cards.a.updatedAt), future + 1)
+  assert.equal(validMasteryProgress({ cards: answer.cards, nodes: { n: answer.session } }), true)
+})
 test('phục hồi phản hồi và chỉ hoàn tất vòng một lần', () => {
   let result = answerCard(createRound(['a'], [], cards, 1, 0, time, 's'), cards, true, time + 1, 'a')
   const restored = JSON.parse(JSON.stringify({ cards: result.cards, nodes: { n: result.session } }))

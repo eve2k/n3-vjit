@@ -1,25 +1,34 @@
 import { dokkai } from '../data/dokkai.js'
-import { cardKey, needsConsolidation } from './masteryLearning.js'
+import { cardKey, needsRecheck } from './masteryLearning.js'
 import { stages, stageQuestions, lessonQuestions, masteryStage, nodeId } from './roadmapContent.js'
 import { canonicalReviewKey, latestAnswer } from './reviewQuestionIds.js'
+import { usableQuestion } from './questionUsability.js'
 
 export const REVIEW_MODES = ['multiple-choice', 'true-false', 'written']
 export const normalizeWrittenAnswer = text => String(text ?? '').normalize('NFKC').trim()
 export const correctAnswerText = question => question.options?.[question.correctAnswer]
 export const supportsWritten = stageId => ['kanji', 'vocab', 'forms'].includes(stageId)
-const usable = question => typeof correctAnswerText(question) === 'string' && normalizeWrittenAnswer(correctAnswerText(question)).length > 0
+const usable = usableQuestion
+const catalogCache = new Map()
 
 export function reviewCatalog(stageId) {
+  if (catalogCache.has(stageId)) return catalogCache.get(stageId)
   const stage = stages.find(item => item.id === stageId && !item.last)
   if (!stage) return []
   // Reading lessons follow actual passages, not fixed four-question slices.
-  if (stageId === 'reading') return dokkai.flatMap(passage => passage.questions.map(question => ({
+  if (stageId === 'reading') {
+    const catalog = dokkai.flatMap(passage => passage.questions.map(question => ({
     ...question, section: 'dokkai', lessonId: passage.id, lessonTitle: passage.titleVi,
     passageText: passage.passage, key: `dokkai:${question.id}`,
-  })))
+    })))
+    catalogCache.set(stageId, catalog)
+    return catalog
+  }
   const groups = new Map(stage.lessons.flatMap((title, index) => lessonQuestions(stage, index).map(q =>
     [cardKey(q), { lessonId: nodeId(index), lessonTitle: title }])))
-  return stageQuestions(stage).map(question => ({ ...question, ...groups.get(cardKey(question)), key: cardKey(question) }))
+  const catalog = stageQuestions(stage).map(question => ({ ...question, ...groups.get(cardKey(question)), key: cardKey(question) }))
+  catalogCache.set(stageId, catalog)
+  return catalog
 }
 
 export function eligibleReviewCards(stageId, mastery = {}, results = {}, { lessonIds = null, retryKeys = null } = {}) {
@@ -31,7 +40,7 @@ export function eligibleReviewCards(stageId, mastery = {}, results = {}, { lesso
     if (!usable(question) || seen.has(question.key) || (lessonIds !== null && !lessonIds.includes(question.lessonId))) return false
     seen.add(question.key)
     const card = mastery.cards?.[question.key]
-    if (retry) return retry.has(question.key) && (masteryStage(stage) ? needsConsolidation(card) : latestAnswer(results, question.key)?.correct === false)
+    if (retry) return retry.has(question.key) && (masteryStage(stage) ? needsRecheck(card) : latestAnswer(results, question.key)?.correct === false)
     return masteryStage(stage) ? card?.level === 3 : latestAnswer(results, question.key)?.correct === true
   })
 }
@@ -61,7 +70,7 @@ export function selectReviewCards(pool, { count = Math.min(10, pool.length), pri
 
 export function createReviewItems(questions, mode, stageId, random = Math.random) {
   if (!REVIEW_MODES.includes(mode) || (mode === 'written' && !supportsWritten(stageId))) throw new Error('Chế độ kiểm tra không phù hợp với chặng.')
-  if (!questions.length || questions.some(q => !usable(q))) throw new Error('Không có đủ câu hỏi có đáp án.')
+  if (!questions.length || questions.some(q => !usable(q))) throw new Error('Không có đủ câu hỏi hợp lệ: đáp án thiếu hoặc lựa chọn trùng.')
   const trueCount = Math.floor(questions.length / 2) + (questions.length % 2 && random() < .5 ? 1 : 0)
   const truths = shuffled(questions.map((_, index) => index < trueCount), random)
   return questions.map((question, index) => {

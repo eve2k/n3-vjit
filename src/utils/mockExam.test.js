@@ -3,6 +3,7 @@ import { beforeEach, test } from 'node:test'
 import { allQuizQuestions, dokkai } from '../data/index.js'
 import { createMockExam, getMockExamQuestions, getOverallStatus, getScoreStatus, gradeMockExam, parseManualScore, restoreMockExam, saveMockExamAttempt, serializeMockExam } from './mockExam.js'
 import { getQuizHistory, getWrongQuestions, parseProgressBackup, setStorageUser } from './storage.js'
+import { usableQuestion } from './questionUsability.js'
 
 beforeEach(() => {
   setStorageUser('test-learner')
@@ -28,6 +29,9 @@ test('mock exams select exactly 35 questions, 2 passages, 30 listening questions
   assert.equal(exam.listening.length, 30)
   assert.ok(exam.writing.id)
   assert.equal(new Set(exam.reading.map((item) => item.id)).size, 35)
+  assert.ok(exam.reading.every(usableQuestion))
+  assert.ok(exam.passages.every(passage => passage.questions.every(usableQuestion)))
+  assert.equal(exam.reading.some(item => item.id === 'r4_q35'), false)
   assert.equal(new Set(exam.passages.map((item) => item.id)).size, 2)
   assert.equal(new Set(exam.listening.map((item) => item.id)).size, 30)
   assert.deepEqual(allQuizQuestions.map((question) => question.id), originalQuestions)
