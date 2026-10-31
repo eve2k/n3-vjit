@@ -61,7 +61,7 @@ function StageCards({ stage, mastery, results }) {
     </div>
     {!questions.length ? <div className="panel weak-empty"><BookOpen size={28}/><h3>Chưa có câu đủ điều kiện</h3><p id="review-empty-reason">{masteryStage(stage) ? 'Học thẻ lên bậc Thành thạo để mở bài kiểm tra.' : 'Làm đúng câu hỏi để bổ sung vào danh sách này. Tiến độ cũ không được suy đoán là đã làm đúng.'}</p><Link className="btn btn-secondary" to={stage.id === 'reading' ? '/dokkai' : '/'}>Bắt đầu học</Link></div>
       : [...groups].map(([id, cards]) => <section className="panel review-card-group" key={id}><h3>{cards[0].lessonTitle}</h3><p>{cards.length} câu</p>
-        {cards[0].passageText && <details className="review-passage"><summary>Đọc đoạn văn</summary><p className="jp">{cards[0].passageText}</p></details>}
+        {cards[0].passageText && <details className="review-passage"><summary>Đọc đoạn văn</summary><p className="jp"><QuestionText text={cards[0].passageText} /></p></details>}
         <ul>{cards.map(question => <li key={question.key}><p className="jp"><QuestionText text={question.questionText}/></p><p className="review-card-answer"><CheckCircle2 size={16}/><span><span className="review-answer-label">Đáp án: </span><span className="jp"><QuestionText text={correctAnswerText(question)}/></span></span></p></li>)}</ul>
       </section>)}
   </section>

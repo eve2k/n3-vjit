@@ -20,13 +20,13 @@ function fixture({ overrides = {}, dispatch = () => null } = {}) {
   return { handler, calls }
 }
 
-test('reminders default to off and validate time, timezone and unique weekdays', () => {
+test('reminders default to off and validate per-day times and unique weekdays', () => {
   assert.equal(DEFAULT_REMINDER.enabled, false)
   assert.equal(validateReminder(DEFAULT_REMINDER), '')
-  for (const invalid of [{ local_time: '24:00' }, { local_time: '8:15' }, { timezone: 'fake/timezone' }, { timezone: '' }, { weekdays: [] }, { weekdays: [1, 1] }, { weekdays: [7] }, { weekdays: [1.5] }, { enabled: 'true' }]) {
+  for (const invalid of [{ local_time: '24:00' }, { local_time: '8:15' }, { day_times: ['20:00', 'bad', ...Array(5).fill('20:00')] }, { day_times: ['20:00'] }, { weekdays: [] }, { weekdays: [1, 1] }, { weekdays: [7] }, { weekdays: [1.5] }, { enabled: 'true' }]) {
     assert.ok(validateReminder({ ...DEFAULT_REMINDER, ...invalid }))
   }
-  assert.equal(validateReminder({ ...DEFAULT_REMINDER, timezone: 'Asia/Tokyo', weekdays: [1, 3, 5] }), '')
+  assert.equal(validateReminder({ ...DEFAULT_REMINDER, weekdays: [1, 3, 5], day_times: ['19:00', '18:00', '20:00', '21:00', '20:00', '20:00', '20:00'] }), '')
 })
 
 test('cron rejects public keys, absent credentials and short configured secrets before database access', async () => {
@@ -152,7 +152,100 @@ test('authenticated reminder settings only send schedule fields, never arbitrary
   await assert.rejects(client.loadStudyReminder(), { code: 'session_not_found' })
   await client.signIn('learner@example.com', 'password')
   await client.loadStudyReminder()
-  await client.saveStudyReminder({ ...DEFAULT_REMINDER, recipient: 'other@example.com', api_key: 'nope' })
+  await client.saveStudyReminder({ ...DEFAULT_REMINDER, timezone: 'Asia/Tokyo', recipient: 'other@example.com', api_key: 'nope' })
   assert.ok(calls[1].url.endsWith('/rpc/n3vjit_get_reminder'))
-  assert.deepEqual(calls[2].body, { p_enabled: false, p_local_time: '20:00', p_timezone: 'Asia/Ho_Chi_Minh', p_weekdays: DEFAULT_REMINDER.weekdays })
+  assert.deepEqual(calls[2].body, { p_enabled: false, p_local_time: '20:00', p_timezone: 'Asia/Ho_Chi_Minh', p_weekdays: DEFAULT_REMINDER.weekdays, p_day_times: DEFAULT_REMINDER.day_times })
+})
+
+test('push test requires a valid Supabase session and sends to saved subscriptions', async () => {
+  const calls = []
+  const subscription = { id: 'sub-1', endpoint: 'https://push.example/endpoint', p256dh: 'key', auth: 'auth' }
+  const pushValues = { ...values, VAPID_SUBJECT: 'mailto:study@example.com', VAPID_PUBLIC_KEY: 'public-test-key', VAPID_PRIVATE_KEY: 'private-test-key' }
+  const handler = createReminderHandler({ env: key => pushValues[key] || '', pushSender: async (item, message) => {
+    assert.deepEqual(item, subscription)
+    assert.equal(message.tag, 'n3vjit-push-test')
+    return response({}, 201)
+  }, fetchImpl: async (url, options) => {
+    if (url.endsWith('/auth/v1/user')) return response({ id: 'user-1' })
+    const body = JSON.parse(options.body); calls.push(body)
+    return response([subscription])
+  } })
+  const result = await handler(new Request('https://project.supabase.co/functions/v1/study-reminders/test-push', {
+    method: 'POST', headers: { Authorization: 'Bearer user-access-token', Origin: 'https://study.example.com' },
+  }))
+  assert.equal(result.status, 200)
+  assert.equal(result.headers.get('Access-Control-Allow-Origin'), 'https://study.example.com')
+  assert.deepEqual(await result.json(), { accepted: 1, failed: 0, expired: 0, failure_statuses: [] })
+  assert.deepEqual(calls, [{ p_user_id: 'user-1' }])
+})
+
+test('push test reports the shared one-minute rate limit', async () => {
+  const pushValues = { ...values, VAPID_SUBJECT: 'mailto:study@example.com', VAPID_PUBLIC_KEY: 'public-test-key', VAPID_PRIVATE_KEY: 'private-test-key' }
+  const handler = createReminderHandler({ env: key => pushValues[key] || '', fetchImpl: async url =>
+    url.endsWith('/auth/v1/user') ? response({ id: 'user-1' }) : response({ rate_limited: true, retry_after: 37 }),
+  })
+  const result = await handler(new Request('https://project.supabase.co/functions/v1/study-reminders/test-push', {
+    method: 'POST', headers: { Authorization: 'Bearer user-access-token', Origin: 'https://study.example.com' },
+  }))
+  assert.equal(result.status, 429)
+  assert.deepEqual(await result.json(), { error: 'rate_limited', retry_after: 37 })
+})
+
+test('CORS only allows the configured website origin', async () => {
+  const handler = createReminderHandler({ env: key => values[key] || '' })
+  const allowed = await handler(new Request('https://project.supabase.co/functions/v1/study-reminders/test-push', {
+    method: 'OPTIONS', headers: { Origin: 'https://study.example.com' },
+  }))
+  assert.equal(allowed.status, 204)
+  assert.equal(allowed.headers.get('Access-Control-Allow-Origin'), 'https://study.example.com')
+  assert.equal(allowed.headers.get('Vary'), 'Origin')
+  const rejected = await handler(new Request('https://project.supabase.co/functions/v1/study-reminders/test-push', {
+    method: 'OPTIONS', headers: { Origin: 'https://attacker.example' },
+  }))
+  assert.equal(rejected.status, 403)
+  assert.equal(rejected.headers.get('Access-Control-Allow-Origin'), null)
+  assert.equal(rejected.headers.get('Vary'), 'Origin')
+  const missingOrigin = await handler(new Request('https://project.supabase.co/functions/v1/study-reminders/test-push', { method: 'OPTIONS' }))
+  assert.equal(missingOrigin.status, 403)
+  assert.equal(missingOrigin.headers.get('Access-Control-Allow-Origin'), null)
+  assert.equal(missingOrigin.headers.get('Vary'), 'Origin')
+})
+
+test('push test without a JWT returns 401 with allowed-origin CORS headers', async () => {
+  let authCalls = 0
+  const handler = createReminderHandler({ env: key => values[key] || '', fetchImpl: async () => { authCalls++; return response({ id: 'unexpected' }) } })
+  const result = await handler(new Request('https://project.supabase.co/functions/v1/study-reminders/test-push', {
+    method: 'POST', headers: { Origin: 'https://study.example.com' },
+  }))
+  assert.equal(result.status, 401)
+  assert.deepEqual(await result.json(), { error: 'unauthorized' })
+  assert.equal(result.headers.get('Access-Control-Allow-Origin'), 'https://study.example.com')
+  assert.equal(result.headers.get('Vary'), 'Origin')
+  assert.equal(authCalls, 0)
+})
+
+test('cron responses do not include CORS headers', async () => {
+  const { handler } = fixture()
+  const result = await handler(request('', { headers: { Authorization: 'Bearer wrong', Origin: 'https://study.example.com' } }))
+  assert.equal(result.status, 401)
+  assert.equal(result.headers.get('Access-Control-Allow-Origin'), null)
+  assert.equal(result.headers.get('Vary'), null)
+})
+
+test('push test reports invalid VAPID subject before claiming rate limit', async () => {
+  const calls = []
+  const handler = createReminderHandler({
+    env: key => ({ ...values, VAPID_SUBJECT: 'not-a-contact-uri', VAPID_PUBLIC_KEY: 'pub', VAPID_PRIVATE_KEY: 'priv' })[key] || '',
+    fetchImpl: async url => {
+      if (url.endsWith('/auth/v1/user')) return response({ id: 'user-1' })
+      calls.push(url)
+      return response([])
+    },
+  })
+  const result = await handler(new Request('https://project.supabase.co/functions/v1/study-reminders/test-push', {
+    method: 'POST', headers: { Authorization: 'Bearer user-access-token', Origin: 'https://study.example.com' },
+  }))
+  assert.equal(result.status, 503)
+  assert.deepEqual(await result.json(), { error: 'invalid_vapid_subject' })
+  assert.deepEqual(calls, [])
 })

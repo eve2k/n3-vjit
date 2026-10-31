@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { renshuu3 } from '../data/renshuu3.js'
+import { dokkai } from '../data/dokkai.js'
 import { parseQuestionMarkup, plainQuestionText, questionInstruction } from './questionMarkup.js'
 
 test('hiển thị đúng phần được đánh dấu và đọc văn bản không có ký hiệu', () => {
@@ -9,6 +10,18 @@ test('hiển thị đúng phần được đánh dấu và đọc văn bản kh�
   assert.equal(questionInstruction(renshuu3.find(q => q.id === 'r3_q6')), 'Chọn cách đọc của từ gạch chân')
   assert.equal(questionInstruction(renshuu3.find(q => q.id === 'r3_q26')), 'Chọn chữ kanji của từ gạch chân')
   assert.equal(questionInstruction(renshuu3.find(q => q.id === 'r3_q29')), 'Chọn chữ kanji của từ gạch chân')
+})
+
+test('furigana chỉ áp dụng cho đoạn được chú thích và không thay đổi văn bản dùng để đọc', () => {
+  assert.deepEqual(parseQuestionMarkup('ある{大学|だいがく}の{学長|がくちょう}です。'), [
+    { text: 'ある', marked: false }, { text: '大学', reading: 'だいがく' }, { text: 'の', marked: false }, { text: '学長', reading: 'がくちょう' }, { text: 'です。', marked: false },
+  ])
+  assert.equal(plainQuestionText('ある{大学|だいがく}の{学長|がくちょう}です。'), 'ある大学の学長です。')
+  assert.deepEqual(parseQuestionMarkup('授業中です。'), [{ text: '授業中です。', marked: false }])
+  assert.deepEqual(parseQuestionMarkup('{未完成|}'), [{ text: '{未完成|}', marked: false }])
+  assert.equal(plainQuestionText('数学は[[苦手]]、{漢字|かんじ}です。'), '数学は苦手、漢字です。')
+  assert.equal(parseQuestionMarkup(dokkai[0].passage).filter(part => part.reading).length, 3)
+  assert.ok(plainQuestionText(dokkai[0].passage).startsWith('みなさんのクラスは授業中静かですか。これはある大学の学長の話です。'))
 })
 
 test('mọi câu Kanji có đúng một cặp, đáp án hợp lệ và lựa chọn không trùng', () => {

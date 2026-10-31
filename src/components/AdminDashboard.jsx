@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { ArrowLeft, RefreshCw, ShieldCheck, UserRound } from 'lucide-react'
+import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { ArrowLeft, BookOpen, RefreshCw, ShieldCheck, UserRound } from 'lucide-react'
 import { useAuth } from '../context/authContext.js'
+import QuestionBankAdmin from './QuestionBankAdmin.jsx'
 
 function adminErrorMessage(error) {
   const code = error?.message || error?.code
@@ -12,7 +13,12 @@ function adminErrorMessage(error) {
   return 'Không tải hoặc cập nhật được danh sách tài khoản. Kiểm tra kết nối rồi thử lại.'
 }
 
-export default function AdminDashboard() {
+export default function AdminDashboard({ bankVersion }) {
+  const location = useLocation()
+  return <div className="admin-layout"><header className="admin-topbar"><Link to="/" className="admin-brand"><span className="sidebar-brand-mark"><span>C2J</span></span><span><strong>C2J Study</strong><small>KHÔNG GIAN QUẢN TRỊ</small></span></Link><Link to="/" className="btn btn-secondary"><ArrowLeft size={15} />Quay lại học</Link></header><div className="admin-workspace"><aside className="admin-nav" aria-label="Điều hướng quản trị"><p>QUẢN TRỊ</p><Link className={location.pathname === '/admin' ? 'active' : ''} to="/admin"><ShieldCheck size={17}/>Tài khoản</Link><Link className={location.pathname.startsWith('/admin/questions') ? 'active' : ''} to="/admin/questions"><BookOpen size={17}/>Ngân hàng câu hỏi</Link></aside><main className="admin-main"><Routes><Route index element={<AdminUsers />} /><Route path="questions" element={<QuestionBankAdmin key={bankVersion} />} /><Route path="*" element={<Navigate to="/admin" replace />} /></Routes></main></div></div>
+}
+
+function AdminUsers() {
   const { client, user } = useAuth()
   const [users, setUsers] = useState([])
   const [query, setQuery] = useState('')
@@ -55,8 +61,8 @@ export default function AdminDashboard() {
 
   const formatDate = (value) => value ? new Date(value).toLocaleDateString('vi-VN', { year: 'numeric', month: 'short', day: 'numeric' }) : '—'
 
-  return <div className="page-shell admin-page">
-    <div className="page-heading"><div><p className="eyebrow">QUẢN TRỊ</p><h1>Quản lý tài khoản</h1><p className="page-description">Cấp hoặc thu hồi quyền admin. Thay đổi được kiểm tra lại ở Supabase.</p></div><Link to="/" className="text-link"><ArrowLeft size={15} aria-hidden="true" />Tổng quan</Link></div>
+  return <div className="admin-page">
+    <div className="page-heading"><div><p className="eyebrow">QUẢN TRỊ</p><h1>Quản lý tài khoản</h1><p className="page-description">Cấp hoặc thu hồi quyền admin. Thay đổi được kiểm tra lại ở Supabase.</p></div></div>
     {notice && <p className={`notice ${notice.error ? 'notice-error' : 'notice-success'} mb-5`} role={notice.error ? 'alert' : 'status'}>{notice.text}</p>}
     <section className="panel admin-users-panel">
       <div className="admin-users-toolbar"><label htmlFor="admin-user-search">Tìm theo tên hoặc email</label><input id="admin-user-search" type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="name@example.com" /><button type="button" className="btn btn-secondary" disabled={loading} onClick={loadUsers}><RefreshCw size={16} aria-hidden="true" />Tải lại</button></div>

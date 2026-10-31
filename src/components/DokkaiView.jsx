@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { dokkai } from '../data/index.js'
 import SpeakButton from './SpeakButton.jsx'
+import QuestionText from './QuestionText.jsx'
 import { markDokkaiCompleted, markQuestionCompleted, addWrongQuestion, markWrongQuestionCorrect } from '../utils/storage'
 import useQuestionShortcuts from '../hooks/useQuestionShortcuts.js'
 
@@ -62,8 +63,9 @@ export default function DokkaiView() {
 
   return (
     <div className="page-shell content-page dokkai-page">
+      <FuriganaToggle />
       <div className="page-heading"><div><p className="eyebrow">KỸ NĂNG · 読解</p><h1>Đọc hiểu</h1><p className="page-description">Đọc đoạn văn, tìm thông tin và luyện cách suy luận theo ngữ cảnh.</p></div></div>
-      <div className="mb-3 flex flex-wrap gap-2">
+      <div className="lesson-tabs mb-3 flex flex-wrap gap-2">
         {dokkai.map((p) => (
           <button
             key={p.id}
@@ -74,28 +76,27 @@ export default function DokkaiView() {
               setActiveIndex(0)
               clearPending()
             }}
-            className={`rounded border px-2 py-1 text-sm ${n === p.number ? 'bg-[var(--accent)] text-[var(--accent-ink)]' : 'border-[var(--line)]'}`}
+            aria-pressed={n === p.number}
+            className={`btn ${n === p.number ? 'btn-primary' : 'btn-secondary'}`}
           >
             Bài {p.number}
           </button>
         ))}
       </div>
-      <h1 className="mb-3 text-xl font-semibold">
+      <h2 className="mb-3 text-xl font-semibold">
         読解 ({passage.number}) · {passage.title}
-      </h1>
+      </h2>
       <p className="keyboard-hint mb-4" aria-live="polite">Câu đang chọn: {activeIndex + 1} · {pendingChoice ? `Đáp án ${pendingChoice} · Space để trả lời` : '1–4 chọn đáp án · Space trả lời / chuyển câu'}</p>
-      <div className="grid gap-4 lg:grid-cols-2">
-        <article className="h-fit rounded-lg border border-[var(--line)] bg-[var(--card)] p-4 lg:sticky lg:top-24">
-          <div className="mb-2 flex justify-end">
-            <SpeakButton text={passage.passage} rate={0.85} />
-          </div>
-          <p className="jp whitespace-pre-wrap text-[15px] leading-8">{filled}</p>
+      <div className="dokkai-content">
+        <article className="panel dokkai-passage">
+          <div className="dokkai-passage-heading"><span className="eyebrow">ĐOẠN VĂN</span><SpeakButton text={passage.passage} rate={0.85} label="Nghe đoạn văn (giọng máy)" /></div>
+          <p className="jp dokkai-passage-text"><QuestionText text={filled} /></p>
         </article>
-        <div className="space-y-3">
+        <div className="dokkai-questions">
           {passage.questions.map((q, index) => {
             const pick = picks[q.id]
             return (
-              <div key={q.id} id={`dokkai-question-${q.id}`} onFocus={() => setActiveIndex(index)} onPointerDown={() => setActiveIndex(index)} className={`rounded-lg border border-[var(--line)] bg-[var(--card)] p-3 ${activeIndex === index ? 'shortcut-active' : ''}`}>
+              <div key={q.id} id={`dokkai-question-${q.id}`} onFocus={() => setActiveIndex(index)} onPointerDown={() => setActiveIndex(index)} className={`panel dokkai-question ${activeIndex === index ? 'shortcut-active' : ''}`}>
                 <div className="mb-2 flex justify-between gap-2">
                   <p className="jp font-medium">
                     問{q.questionNumber}. {q.questionText}
@@ -137,3 +138,4 @@ export default function DokkaiView() {
     </div>
   )
 }
+import FuriganaToggle from './FuriganaToggle.jsx'

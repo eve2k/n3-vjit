@@ -1,22 +1,33 @@
+import { useEffect, useRef, useState } from 'react'
 import { plainQuestionText } from '../utils/questionMarkup.js'
-import { Volume2 } from 'lucide-react'
+import { Square, Volume2 } from 'lucide-react'
 import { speakJapanese, stopSpeaking } from '../utils/tts'
 
-export default function SpeakButton({ text, rate = 0.9, className = '', shortcuts }) {
+export default function SpeakButton({ text, rate = 0.9, className = '', shortcuts, label = 'Phát âm' }) {
+  const [playing, setPlaying] = useState(false)
+  const previousText = useRef(text)
+  useEffect(() => {
+    if (previousText.current === text) return
+    previousText.current = text
+    if (playing) stopSpeaking()
+  }, [text, playing])
   if (!text) return null
   return (
     <button
       type="button"
-      className={`inline-flex items-center gap-1 rounded border border-[var(--line)] px-2 py-1 text-xs hover:bg-[var(--accent)] hover:text-[var(--accent-ink)] ${className}`}
+      className={`speak-button inline-flex items-center gap-2 rounded border border-[var(--line)] px-3 py-2 text-sm hover:bg-[var(--accent-soft)] ${playing ? 'is-playing' : ''} ${className}`}
       onClick={() => {
-        stopSpeaking()
-        speakJapanese(plainQuestionText(text), rate)
+        if (playing) { stopSpeaking(); return }
+        if (!window.speechSynthesis) return
+        setPlaying(true)
+        speakJapanese(plainQuestionText(text), rate, () => setPlaying(false))
       }}
-      aria-label="Phát âm tiếng Nhật"
+      aria-label={playing ? 'Dừng phát âm' : label}
+      aria-pressed={playing}
       aria-keyshortcuts={shortcuts}
     >
-      <Volume2 size={14} />
-      TTS
+      {playing ? <Square size={15} aria-hidden="true" /> : <Volume2 size={16} aria-hidden="true" />}
+      {playing ? 'Dừng phát' : label}
     </button>
   )
 }

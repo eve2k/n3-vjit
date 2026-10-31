@@ -1,0 +1,41 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "agent": {
+    "plan": {
+      "model": "opencodex/gpt-6-astra"
+    },
+    "build": {
+      "model": "opencodex/gpt-6.1-sol"
+    },
+    "ask": {
+      "description": "Hỏi đáp, đọc code, không sửa file",
+      "mode": "primary",
+      "model": "opencodex/google-antigravity/gemini-3.8-flash",
+      "tools": { "write": false, "edit": false, "bash": false }
+    },
+    "quick": {
+      "description": "Việc vặt: đổi text, CSS nhỏ, đổi tên biến",
+      "mode": "primary",
+      "model": "opencodex/gpt-6-luna"
+    },
+    "ui": {
+      "description": "Thiết kế và chỉnh giao diện",
+      "mode": "primary",
+      "model": "opencodex/google-antigravity/claude-sonnet-4-6"
+    }
+  },
+  "mcp": {
+    "servers": {
+      "codegraph": {
+        "type": "local",
+        "command": [
+          "codegraph",
+          "serve",
+          "--mcp"
+        ],
+        "disabled": false,
+        "codemode": false
+      }
+    }
+  }
+}

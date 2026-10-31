@@ -1,5 +1,12 @@
 export function parseQuestionMarkup(text = '') {
-  return String(text).split(/(\[\[[^[\]]+\]\])/g).filter(Boolean).map(part => part.startsWith('[[') && part.endsWith(']]') ? { text: part.slice(2, -2), marked: true } : { text: part, marked: false })
+  return String(text).split(/(\[\[[^[\]]+\]\]|\{[^{}|\n]+\|[^{}|\n]+\})/g).filter(Boolean).map(part => {
+    if (part.startsWith('[[') && part.endsWith(']]')) return { text: part.slice(2, -2), marked: true }
+    if (/^\{[^{}|\n]+\|[^{}|\n]+\}$/.test(part)) {
+      const [base, reading] = part.slice(1, -1).split('|')
+      return { text: base, reading }
+    }
+    return { text: part, marked: false }
+  })
 }
 export const plainQuestionText = text => parseQuestionMarkup(text).map(part => part.text).join('')
 export function questionInstruction(question) {

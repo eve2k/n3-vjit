@@ -34,7 +34,11 @@ export function createAuthClient({ url = '', publicKey = '', storage, fetchImpl 
     const contentType = response.headers.get('content-type') || ''
     let data = null
     try { data = contentType.includes('json') ? await response.json() : null } catch { throw error('request_failed', response.status) }
-    if (!response.ok) throw error(data?.error_code || data?.error || (typeof data?.message === 'string' && ['admin_required', 'last_admin', 'user_not_found'].includes(data.message) ? data.message : null) || (typeof data?.code === 'string' ? data.code : null) || (response.status === 401 ? 'session_not_found' : 'request_failed'), response.status)
+    if (!response.ok) {
+      const failure = error(data?.error_code || data?.error || (typeof data?.message === 'string' && ['admin_required', 'last_admin', 'user_not_found'].includes(data.message) ? data.message : null) || (typeof data?.code === 'string' ? data.code : null) || (response.status === 401 ? 'session_not_found' : 'request_failed'), response.status)
+      if (Number.isInteger(data?.retry_after)) failure.retryAfter = data.retry_after
+      throw failure
+    }
     if (!contentType.includes('json') && response.status !== 204) throw error('request_failed', response.status)
     return data
   }
@@ -205,8 +209,23 @@ export function createAuthClient({ url = '', publicKey = '', storage, fetchImpl 
     async saveStudyReminder(settings) {
       return authorizedRequest('/rest/v1/rpc/n3vjit_save_reminder', { method: 'POST', body: {
         p_enabled: settings.enabled, p_local_time: settings.local_time,
-        p_timezone: settings.timezone, p_weekdays: settings.weekdays,
+        p_timezone: 'Asia/Ho_Chi_Minh', p_weekdays: settings.weekdays, p_day_times: settings.day_times,
       } })
+    },
+    async savePushSubscription(subscription, device) {
+      return authorizedRequest('/rest/v1/rpc/n3vjit_save_push_subscription', { method: 'POST', body: {
+        p_endpoint: subscription.endpoint, p_p256dh: subscription.keys.p256dh, p_auth: subscription.keys.auth,
+        p_device_id: device.id, p_device_name: device.name,
+      } })
+    },
+    async deletePushSubscription(id) {
+      return authorizedRequest('/rest/v1/rpc/n3vjit_delete_push_subscription', { method: 'POST', body: { p_id: id } })
+    },
+    async setPushEnabled(enabled) {
+      return authorizedRequest('/rest/v1/rpc/n3vjit_set_push_enabled', { method: 'POST', body: { p_enabled: enabled } })
+    },
+    async sendPushTest() {
+      return authorizedRequest('/functions/v1/study-reminders/test-push', { method: 'POST', body: {} })
     },
     async checkAdmin() {
       const result = await authorizedRequest('/rest/v1/rpc/n3vjit_is_admin', { method: 'POST', body: {} })
@@ -217,6 +236,23 @@ export function createAuthClient({ url = '', publicKey = '', storage, fetchImpl 
     },
     async setAdminRole(email, isAdmin) {
       return authorizedRequest('/rest/v1/rpc/n3vjit_admin_set_role', { method: 'POST', body: { p_email: email, p_is_admin: isAdmin } })
+    },
+    async loadQuestionBank() {
+      if (!configured) throw error('not_configured')
+      let response
+      try { response = await fetchImpl(`${baseUrl}/rest/v1/n3vjit_question_bank?select=id,section,question_number,question_text,highlight_word,options,correct_answer,note,explanation,archived_at&order=section,question_number`, { headers: { apikey: publicKey }, signal: AbortSignal.timeout(15000) }) }
+      catch { throw error('network_error') }
+      if (!response.ok) throw error('request_failed', response.status)
+      const rows = await response.json()
+      return rows.map(row => ({ id: row.id, section: row.section, questionNumber: row.question_number, questionText: row.question_text, highlightWord: row.highlight_word, options: row.options, correctAnswer: row.correct_answer, keyTakeaway: row.note || row.highlight_word, note: row.note, explanation: row.explanation, archived_at: row.archived_at }))
+    },
+    async saveQuestion(question) {
+      const row = { id: question.id, section: question.section, question_number: question.questionNumber, question_text: question.questionText, highlight_word: question.highlightWord, options: question.options, correct_answer: question.correctAnswer, note: question.note || null, explanation: question.explanation || null, archived_at: question.archived_at || null }
+      return authorizedRequest('/rest/v1/n3vjit_question_bank?on_conflict=id', { method: 'POST', body: row, headers: { Prefer: 'resolution=merge-duplicates,return=representation' } })
+    },
+    async archiveQuestion(id, archived) {
+      const query = new URLSearchParams({ id: `eq.${id}` })
+      return authorizedRequest(`/rest/v1/n3vjit_question_bank?${query}`, { method: 'PATCH', body: { archived_at: archived ? new Date().toISOString() : null }, headers: { Prefer: 'return=representation' } })
     },
     async saveProgress(data, updatedAt = null, expectedUserId = null) {
       const current = await validSession()

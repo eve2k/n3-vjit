@@ -3,7 +3,7 @@ import { beforeEach, test } from 'node:test'
 import { allQuizQuestions } from '../data/index.js'
 import { buildStudyPlan, newerSrsRecord, scheduleReview, SRS_INTERVALS, srsKey, studyDay, validSrsRecord } from './spacedRepetition.js'
 import { calculateRoadmap, defaultExamDate, effectiveReviewDue, forecastStudyDays, mergeStudyRoadmaps, plannedExamSessions, consolidationStudyDates, validDay, validStudyRoadmap } from './studyRoadmap.js'
-import { ensureStudyRoadmap, getSpacedRepetition, getStudyRoadmap, markQuestionCompleted, parseProgressBackup, readProgressSnapshot, recordSpacedAnswer, resetAllProgress, saveStudyExamDate, setStorageUser, writeProgressSnapshot } from './storage.js'
+import { addWrongQuestion, ensureStudyRoadmap, getCompletedQuestions, getSpacedRepetition, getStudyRoadmap, markQuestionCompleted, parseProgressBackup, readProgressSnapshot, recordSpacedAnswer, resetAllProgress, saveMasteryProgress, saveStudyExamDate, setStorageUser, writeProgressSnapshot } from './storage.js'
 import { reconcileProgress } from './syncProgress.js'
 
 const DAY = 86400000
@@ -93,6 +93,39 @@ test('previously completed questions become reviews without assuming mastery or 
   const record = recordSpacedAnswer(questions[0], true, { now: NOW, reviewId: 'legacy-review' })
   assert.equal(record.introducedOn, null)
   assert.equal(record.stage, 1)
+})
+
+test('a first ordinary answer counts once today, while retries and later visits keep its original day', () => {
+  const question = pool(1)[0]
+  const first = recordSpacedAnswer(question, true, { now: NOW, reviewId: 'first' })
+  assert.equal(first.introducedOn, '2026-10-26')
+  assert.equal(first.dueAt, new Date(NOW + DAY).toISOString())
+  assert.equal(buildStudyPlan([question], getSpacedRepetition(), getCompletedQuestions(), { now: NOW }).newToday, 1)
+  markQuestionCompleted(question.section, question.id)
+  assert.deepEqual(recordSpacedAnswer(question, true, { now: NOW + 1000, reviewId: 'first' }), first)
+  const retry = recordSpacedAnswer(question, false, { now: NOW + 2000, reviewId: 'retry' })
+  assert.equal(retry.introducedOn, first.introducedOn)
+  assert.equal(retry.dueAt, new Date(NOW + 2000 + 10 * 60000).toISOString())
+  assert.equal(buildStudyPlan([question], getSpacedRepetition(), getCompletedQuestions(), { now: Date.parse('2026-10-26T16:59:59Z') }).newToday, 1)
+  assert.equal(buildStudyPlan([question], getSpacedRepetition(), getCompletedQuestions(), { now: Date.parse('2026-10-26T17:00:00Z') }).newToday, 0)
+  const revisit = recordSpacedAnswer(question, false, { now: NOW + DAY, reviewId: 'revisit' })
+  assert.equal(revisit.introducedOn, first.introducedOn)
+  assert.equal(revisit.reviews, 3)
+  assert.equal(buildStudyPlan([question], getSpacedRepetition(), getCompletedQuestions(), { now: NOW + DAY }).newToday, 0)
+})
+
+test('a mastery card encountered before SRS tracking is never introduced again', () => {
+  const question = pool(1)[0]
+  saveMasteryProgress({ cards: { [srsKey(question)]: { level: 1, lastResult: 'correct', updatedAt: new Date(NOW - DAY).toISOString(), updateId: 'old' } }, nodes: {} })
+  const record = recordSpacedAnswer(question, true, { now: NOW, reviewId: 'old-lesson' })
+  assert.equal(record.introducedOn, null)
+  assert.equal(buildStudyPlan([question], getSpacedRepetition(), {}, { now: NOW }).newToday, 0)
+})
+
+test('a question previously missed outside quiz is a review, not a first introduction', () => {
+  const question = pool(1)[0]
+  addWrongQuestion(question.section, question.id)
+  assert.equal(recordSpacedAnswer(question, false, { now: NOW, reviewId: 'old-mistake' }).introducedOn, null)
 })
 
 test('future schedules leave an empty session with the next review timestamp', () => {

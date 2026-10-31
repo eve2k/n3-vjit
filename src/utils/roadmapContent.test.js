@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { weakMasteryNodes, weakMasteryCount, stageProgress, continueLessonIndex, stages, lessonQuestions, stageQuestions } from './roadmapContent.js'
+import { weakMasteryNodes, weakMasteryCount, stageProgress, continueLessonIndex, recommendedStageIndex, stages, lessonQuestions, stageQuestions } from './roadmapContent.js'
 import { usableQuestion } from './questionUsability.js'
 
 test('vocabulary nodes keep source boundaries and cover every question exactly once', () => {
@@ -63,4 +63,12 @@ test('chỉ thẻ đã gặp ở bậc 0 hoặc 1 được tính cần ôn', () 
   assert.deepEqual(summary.counts, [1, 1, 1, 0])
   assert.equal(summary.unseen, 47)
   assert.equal(summary.total, 50)
+})
+
+test('gợi ý chặng đầu tiên chưa hoàn thành từ tiến độ hiện có', () => {
+  assert.equal(recommendedStageIndex(), 0)
+  const quizOnly = { renshuu3: stageQuestions(stages[0]).map(question => question.id) }
+  assert.equal(recommendedStageIndex(quizOnly), 0)
+  const nodes = Object.fromEntries(stages[0].lessons.map((_, index) => [`kanji:lesson-${index + 1}`, { completedRounds: 3 }]))
+  assert.equal(recommendedStageIndex({}, { cards: {}, nodes }), 1)
 })

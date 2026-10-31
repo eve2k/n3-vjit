@@ -86,6 +86,11 @@ export function stageProgress(stage, completed = {}, mastery = {}) {
   return { counts, unseen, total, passed, lessons: stage.lessons.length }
 }
 
+export function recommendedStageIndex(completed = {}, mastery = {}) {
+  const index = stages.findIndex(stage => !stage.last && stageProgress(stage, completed, mastery).passed < stage.lessons.length)
+  return index < 0 ? stages.length - 1 : index
+}
+
 export function continueLessonIndex(stage, completed = {}, mastery = {}) {
   if (stage.last) return 0
   const cards = mastery.cards || {}

@@ -2,6 +2,7 @@
 // Uses Web Speech API with ja-JP language
 
 let currentUtterance = null;
+let currentOnEnd = null;
 
 /**
  * Speak Japanese text using Web Speech API
@@ -32,11 +33,16 @@ export const speakJapanese = (text, rate = 0.9, onEnd = null) => {
     utterance.voice = japaneseVoice;
   }
 
-  if (onEnd) {
-    utterance.onend = onEnd;
-  }
-
+  const finish = () => {
+    if (currentUtterance !== utterance) return;
+    currentUtterance = null;
+    currentOnEnd = null;
+    onEnd?.();
+  };
+  utterance.onend = finish;
+  utterance.onerror = finish;
   currentUtterance = utterance;
+  currentOnEnd = onEnd;
   window.speechSynthesis.speak(utterance);
 };
 
@@ -44,10 +50,13 @@ export const speakJapanese = (text, rate = 0.9, onEnd = null) => {
  * Stop any currently playing speech
  */
 export const stopSpeaking = () => {
+  const onEnd = currentOnEnd;
+  currentOnEnd = null;
+  currentUtterance = null;
   if (window.speechSynthesis) {
     window.speechSynthesis.cancel();
   }
-  currentUtterance = null;
+  onEnd?.();
 };
 
 /**

@@ -84,7 +84,7 @@ function ReviewQuestion({ session, cursor, item, question, onFinish }) {
     {error && <p className="notice notice-error" role="alert">{error}</p>}
     <section className="panel review-question">
       <div className="review-question-meta"><p>{item.mode === 'true-false' ? 'Câu hỏi và đáp án dưới đây có khớp nhau không?' : item.mode === 'written' ? 'Gõ đáp án từ trí nhớ của bạn' : questionInstruction(question)}</p><SpeakButton text={plainQuestionText(question.questionText)} shortcuts="S"/></div>
-      {question.passageText && <details className="review-passage" open><summary>Đoạn văn</summary><p className="jp">{question.passageText}</p></details>}
+      {question.passageText && <details className="review-passage" open><summary>Đoạn văn</summary><p className="jp"><QuestionText text={question.passageText} /></p></details>}
       <h2 className="jp"><QuestionText text={question.questionText}/></h2>
       {item.mode === 'true-false' && <div className="review-proposed-answer"><span>Đáp án được đề xuất</span><p className="jp"><QuestionText text={question.options[item.candidate]}/></p></div>}
       {item.mode === 'written' ? <form className="review-written" onSubmit={event => { event.preventDefault(); if (!answered && text.trim()) respond(text) }}><label htmlFor="review-written-answer">Câu trả lời của bạn</label><input ref={inputRef} id="review-written-answer" value={text} onChange={event => setText(event.target.value)} readOnly={answered} autoComplete="off" spellCheck={false} maxLength={2000} className="jp" placeholder="Nhập đáp án…"/>{!answered && <button className="btn btn-primary" type="submit" disabled={!text.trim()}>Nộp câu trả lời</button>}</form>

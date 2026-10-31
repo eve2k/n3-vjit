@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight, ArrowUpRight, BookOpen, Check, CircleHelp, Headphones, Layers3, RotateCcw, Sparkles, Target, Trophy, Upload, Download, PenLine, MessageCircle } from 'lucide-react'
-import { quizSections, QUIZ_TOTAL, dokkai, flashcardDecks } from '../data/index.js'
-import { exportProgress, getCompletedQuestions, getDokkaiProgress, getMasteredFlashcards, getQuizHistory, getWrongQuestions, importProgress } from '../utils/storage.js'
+import { allQuizQuestions, quizSections, QUIZ_TOTAL, dokkai, flashcardDecks } from '../data/index.js'
+import { exportProgress, getCompletedQuestions, getDokkaiProgress, getMasteredFlashcards, getMasteryProgress, getQuizHistory, getSpacedRepetition, getStudyRoadmap, getWrongQuestions, importProgress } from '../utils/storage.js'
 import { formatDuration, getMistakeQuestions, getQuizProgress, getSectionProgress } from '../utils/learning.js'
+import { buildStudyPlan } from '../utils/spacedRepetition.js'
+import { continueLessonIndex, recommendedStageIndex, stages, weakMasteryCount } from '../utils/roadmapContent.js'
 import { useAuth } from '../context/authContext.js'
+import DailyStudyOverview from './DailyStudyOverview.jsx'
 
 const SECTION_NAMES = { fukushuu1: 'Đồng nghĩa', renshuu2: 'Từ vựng', renshuu3: 'Kanji', renshuu4: 'Ngữ pháp', renshuu5: 'Chia thể' }
 const AREAS = [
@@ -23,6 +26,11 @@ export default function Dashboard() {
   const [notice, setNotice] = useState(null)
   const [importing, setImporting] = useState(false)
   const completed = getCompletedQuestions()
+  const mastery = getMasteryProgress()
+  const todayPlan = buildStudyPlan(allQuizQuestions, getSpacedRepetition(), completed, { now, studyPlan: getStudyRoadmap() })
+  const recommended = stages[recommendedStageIndex(completed, mastery)]
+  const recommendedLesson = recommended.lessons[continueLessonIndex(recommended, completed, mastery)]
+  const weakCount = weakMasteryCount(mastery)
   const done = getQuizProgress(completed)
   const percent = Math.round(done / QUIZ_TOTAL * 100)
   const mastered = new Set(getMasteredFlashcards())
@@ -53,21 +61,15 @@ export default function Dashboard() {
     <header className="home-heading"><div><p className="eyebrow">TỔNG QUAN HỌC TẬP · N3 VJIT</p><h1>{firstName ? `Chào ${firstName}, hôm nay học gì?` : 'Hôm nay, mình học gì?'}</h1><p className="page-description">Một phiên học vừa sức giúp bạn tiến gần hơn đến ngày thi.</p></div><div className="home-date"><span>{new Intl.DateTimeFormat('vi-VN', { weekday: 'long' }).format(now)}</span><strong>{new Intl.DateTimeFormat('vi-VN', { day: 'numeric', month: 'long' }).format(now)}</strong></div></header>
 
     <section className="home-hero" aria-labelledby="home-hero-title">
-      <div className="home-hero-copy"><span className="home-hero-kicker"><Sparkles size={15} /> HỌC THEO CHUYÊN ĐỀ</span>
-        <h2 id="home-hero-title">Chọn phần muốn học</h2>
-        <p>Học lần lượt theo chuyên đề, xem giải thích ngay sau từng câu và tiếp tục từ phần bạn đang quan tâm.</p>
-        <div className="home-hero-actions"><Link to="/study" className="btn btn-primary hero-action">Mở không gian học tập<ArrowRight size={17} /></Link><Link to="/exam" className="hero-quiet-link">Thi thử tổng hợp <ArrowUpRight size={15} /></Link></div>
+      <div className="home-hero-copy"><span className="home-hero-kicker"><Sparkles size={15} /> GỢI Ý HỌC HÔM NAY</span>
+        <h2 id="home-hero-title">{recommended.last ? 'Luyện đề thi thử' : `${recommended.title} · ${recommendedLesson}`}</h2>
+        <p>{recommended.last ? 'Bạn đã đi qua các chặng học. Tiếp tục luyện đề để chuẩn bị cho ngày thi.' : `Tiếp tục chặng ${recommended.title} theo lộ trình hiện tại.`}</p>
+        <div className="home-hero-actions"><Link to={recommended.last ? '/exam' : '/'} className="btn btn-primary hero-action">{recommended.last ? 'Mở đề thi thử' : 'Tiếp tục lộ trình'}<ArrowRight size={17} /></Link><Link to="/study" className="hero-quiet-link">Chọn chuyên đề khác <ArrowUpRight size={15} /></Link></div>
       </div>
-      <div className="home-hero-progress"><div className="progress-ring" style={{ '--progress': `${percent}%` }}><div><strong>{percent}<small>%</small></strong><span>ngân hàng đã học</span></div></div><p>{done} / {QUIZ_TOTAL} câu đã làm</p></div>
       <span className="hero-watermark" aria-hidden="true">N3</span>
     </section>
 
-    <div className="home-metrics" aria-label="Tiến độ học tập">
-      <article className="metric-card"><span className="metric-icon green"><Target size={18} /></span><strong>{done}<small> / {QUIZ_TOTAL}</small></strong><span>Câu hỏi đã làm</span><div className="progress-track"><span style={{ width: `${percent}%` }} /></div></article>
-      <article className="metric-card"><span className="metric-icon amber"><BookOpen size={18} /></span><strong>{readingDone}<small> / {dokkai.length}</small></strong><span>Bài đọc đã hoàn thành</span><Link to="/dokkai">Mở phần đọc hiểu <ArrowRight size={13} /></Link></article>
-      <article className="metric-card"><span className="metric-icon violet"><Layers3 size={18} /></span><strong>{mastered.size}<small> / {flashcards.length}</small></strong><span>Flashcard đã thuộc</span><Link to="/flashcards">Ôn flashcard <ArrowRight size={13} /></Link></article>
-      <article className="metric-card"><span className="metric-icon rose"><RotateCcw size={18} /></span><strong>{wrongCount}</strong><span>Câu cần củng cố</span><Link to="/mistakes">Xem câu sai <ArrowRight size={13} /></Link></article>
-    </div>
+    <DailyStudyOverview plan={todayPlan} weakCount={weakCount} />
 
     <div className="home-main-grid">
       <section className="home-section" aria-labelledby="course-title">
@@ -83,6 +85,13 @@ export default function Dashboard() {
         <section className="study-tip-card"><span className="metric-icon green"><BookOpen size={18} /></span><p className="eyebrow">CÁCH HỌC</p><h2>Học từng phần</h2><p>Chọn một chuyên đề, làm lần lượt các câu hỏi và đọc giải thích sau mỗi câu. Tiến độ sẽ lưu vào tài khoản.</p><Link to="/study" className="btn btn-secondary">Chọn phần học <ArrowRight size={15} /></Link></section>
         <section className="exam-teaser"><span className="metric-icon blue"><Trophy size={18} /></span><p className="eyebrow">LÀM QUEN VỚI PHÒNG THI</p><h2>Thi thử tổng hợp</h2><p>35 câu đọc hiểu · 2 bài đọc · 30 câu nghe. Mỗi phần chấm riêng, từ 3 điểm là đạt.</p><Link to="/exam" className="btn btn-secondary">Xem đề thi <ArrowRight size={15} /></Link></section>
       </aside>
+    </div>
+
+    <div className="home-metrics" aria-label="Tiến độ học tập">
+      <article className="metric-card"><span className="metric-icon green"><Target size={18} /></span><strong>{done}<small> / {QUIZ_TOTAL}</small></strong><span>Câu hỏi đã làm</span><div className="progress-track"><span style={{ width: `${percent}%` }} /></div></article>
+      <article className="metric-card"><span className="metric-icon amber"><BookOpen size={18} /></span><strong>{readingDone}<small> / {dokkai.length}</small></strong><span>Bài đọc đã hoàn thành</span><Link to="/dokkai">Mở phần đọc hiểu <ArrowRight size={13} /></Link></article>
+      <article className="metric-card"><span className="metric-icon violet"><Layers3 size={18} /></span><strong>{mastered.size}<small> / {flashcards.length}</small></strong><span>Flashcard đã thuộc</span><Link to="/flashcards">Ôn flashcard <ArrowRight size={13} /></Link></article>
+      <article className="metric-card"><span className="metric-icon rose"><RotateCcw size={18} /></span><strong>{wrongCount}</strong><span>Câu cần củng cố</span><Link to="/mistakes">Xem câu sai <ArrowRight size={13} /></Link></article>
     </div>
 
     <section className="home-section skill-section" aria-labelledby="skills-title"><div className="section-title-row"><div><p className="eyebrow">LUYỆN ĐỦ CÁC KỸ NĂNG</p><h2 id="skills-title">Chọn phần muốn học</h2></div></div><div className="skill-grid">{AREAS.map(({ to, label, japanese, icon: Icon, color, detail }) => <Link key={to} to={to} className="skill-card"><span className={`metric-icon ${color}`}><Icon size={19} /></span><span className="skill-copy"><strong>{label}</strong><small>{label === 'Đọc hiểu' ? `${readingDone}/${dokkai.length} bài đã học` : detail}</small></span><span className="skill-jp jp">{japanese}</span><ArrowUpRight size={16} className="skill-open" /></Link>)}</div></section>

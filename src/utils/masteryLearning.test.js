@@ -1,8 +1,15 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { answerCard, advanceAfterFeedback, applyReviewAnswer, createRound, currentRoundSituation, enterNodeRound, nodeLearningDecision, nodeStatus, mergeMasteryProgress, validMasteryProgress } from './masteryLearning.js'
+import { answerCard, advanceAfterFeedback, applyReviewAnswer, createRound, currentRoundSituation, enterNodeRound, nodeLearningDecision, nodeStatus, mergeMasteryProgress, summaryRouteDecision, validMasteryProgress } from './masteryLearning.js'
 const time = Date.parse('2026-10-27T00:00:00Z')
 const cards = Object.fromEntries(['a','b','c','d','e'].map(key => [key, { level: 0, lastResult: 'wrong', updatedAt: new Date(time).toISOString(), updateId: key }]))
+test('điều hướng kết quả theo trạng thái vòng học', () => {
+  assert.equal(summaryRouteDecision(null), 'preview')
+  assert.equal(summaryRouteDecision({ queue: ['a'], feedback: null, completedRounds: 1 }), 'fallback')
+  assert.equal(summaryRouteDecision({ queue: [], feedback: { key: 'a' }, completedRounds: 0 }), 'fallback')
+  assert.equal(summaryRouteDecision({ queue: [], feedback: null, completedRounds: 1 }), 'summary')
+  assert.equal(summaryRouteDecision({ queue: [], feedback: null, completedRounds: 0 }), 'fallback')
+})
 test('bậc và giới hạn tăng trong vòng', () => {
   let session = createRound(['a'], [], cards, 1, 0, time, 's')
   let result = answerCard(session, cards, true, time + 1, '1')

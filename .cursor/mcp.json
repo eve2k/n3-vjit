@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "codegraph": {
+      "type": "stdio",
+      "command": "codegraph",
+      "args": [
+        "serve",
+        "--mcp",
+        "--path",
+        "/home/eve/Documents/workspace-debian/nn13/n3-vjit-webapp"
+      ]
+    }
+  }
+}

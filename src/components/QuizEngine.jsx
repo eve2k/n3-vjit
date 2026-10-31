@@ -6,7 +6,7 @@ import { ArrowLeft, ArrowRight, BookOpen, CheckCircle2, RotateCcw } from 'lucide
 import { allQuizQuestions, quizSections } from '../data/index.js'
 import { grammarGuide } from '../data/grammarGuide.js'
 import SpeakButton from './SpeakButton.jsx'
-import { addWrongQuestion, getCompletedQuestions, getWrongQuestions, markQuestionCompleted, markWrongQuestionCorrect, saveLastLesson } from '../utils/storage.js'
+import { addWrongQuestion, getCompletedQuestions, getWrongQuestions, markQuestionCompleted, markWrongQuestionCorrect, recordSpacedAnswer, saveLastLesson } from '../utils/storage.js'
 import { getMistakeQuestions, getSectionProgress, gradeExam } from '../utils/learning.js'
 import { useAuth } from '../context/authContext.js'
 import useQuestionShortcuts from '../hooks/useQuestionShortcuts.js'
@@ -75,6 +75,7 @@ export default function QuizEngine({ mistakeMode = false, focusMode = false }) {
     if (!q || answered.current[q.id] || !Object.hasOwn(q.options, letter)) return
     try {
       const correct = String(letter) === String(q.correctAnswer)
+      recordSpacedAnswer(q, correct, { now: Date.now(), reviewId: createId() })
       answered.current[q.id] = letter
       setAnswers(previous => ({ ...previous, [q.id]: letter }))
       markQuestionCompleted(q.section, q.id)
@@ -93,6 +94,7 @@ export default function QuizEngine({ mistakeMode = false, focusMode = false }) {
   const description = mistakeMode ? 'Làm lại câu bạn từng trả lời sai.' : focusMode ? 'Chọn một phần, học lần lượt và xem đáp án ngay sau mỗi câu.' : 'Chọn chuyên đề rồi luyện các câu hỏi theo thứ tự.'
 
   return <div className={`page-shell quiz-page ${focusMode ? 'focus-study-page study-space-page' : ''}`}>
+    <FuriganaToggle disabled={q?.section === 'renshuu3' || sectionId === 'renshuu3'} />
     <div className="page-heading"><div><p className="eyebrow">{focusMode ? 'KHÔNG GIAN HỌC TẬP' : mistakeMode ? 'CỦNG CỐ KIẾN THỨC' : 'LUYỆN TẬP'}</p><h1>{title}</h1><p className="page-description">{description}</p></div>{!focusMode && <Link to="/" className="text-link"><ArrowLeft size={15} aria-hidden="true" />Tổng quan</Link>}</div>
 
     {notice && <p className="notice notice-error" role="alert">{notice}</p>}
@@ -120,7 +122,7 @@ export default function QuizEngine({ mistakeMode = false, focusMode = false }) {
         <section className="panel question-card" aria-labelledby="question-heading">
           <div className="question-meta"><span>{q.contextTitle || quizSections.find(section => section.id === q.section)?.label || q.section} · Câu {index + 1}/{questions.length}</span><SpeakButton text={q.questionText} /></div>
           <div className="progress-track mb-6"><span style={{ width: `${(index + 1) / questions.length * 100}%` }} /></div>
-          {q.passageText && <details className="question-context" open><summary>Đoạn văn của câu hỏi</summary><p className="jp whitespace-pre-wrap">{q.passageText}</p></details>}
+          {q.passageText && <details className="question-context" open><summary>Đoạn văn của câu hỏi</summary><p className="jp whitespace-pre-wrap"><QuestionText text={q.passageText} /></p></details>}
           {q.image && <img src={q.image} alt="Hình minh họa của câu hỏi" className="mb-4 max-h-64 rounded-lg object-contain" />}
           <p className="question-instruction">{questionInstruction(q)}</p><h2 id="question-heading" className="jp question-text"><QuestionText text={q.questionText} /></h2>
           <div className="answer-list">{Object.entries(q.options || {}).map(([letter, text]) => {
@@ -143,3 +145,4 @@ export default function QuizEngine({ mistakeMode = false, focusMode = false }) {
     </div>}
   </div>
 }
+import FuriganaToggle from './FuriganaToggle.jsx'

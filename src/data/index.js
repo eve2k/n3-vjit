@@ -8,7 +8,7 @@ import { choukai } from './choukai.js';
 import { kaiwa, sakubun } from './kaiwa_sakubun.js';
 import { flashcards } from './flashcards.js';
 
-export const QUIZ_SECTIONS = [
+const QUESTION_SECTIONS = [
   { id: 'fukushuu1', label: '復習1', title: '復習1 · Câu đồng nghĩa', questions: fukushuu1 },
   { id: 'renshuu2', label: '練習2', title: '練習2 · Từ vựng & collocation', questions: renshuu2 },
   { id: 'renshuu3', label: '練習3', title: '練習3 · Kanji', questions: renshuu3 },
@@ -16,10 +16,22 @@ export const QUIZ_SECTIONS = [
   { id: 'renshuu5', label: '練習5', title: '練習5 · Chia thể', questions: renshuu5 },
 ];
 
-export const quizSections = QUIZ_SECTIONS;
-export const ALL_QUIZ_QUESTIONS = QUIZ_SECTIONS.flatMap((s) => s.questions);
-export const allQuizQuestions = ALL_QUIZ_QUESTIONS;
-export const QUIZ_TOTAL = ALL_QUIZ_QUESTIONS.length;
+export let QUIZ_SECTIONS = QUESTION_SECTIONS;
+export function applyQuestionBank(rows) {
+  if (!Array.isArray(rows)) return;
+  const bySection = Object.fromEntries(QUESTION_SECTIONS.map(section => [section.id, []]));
+  for (const row of rows) if (bySection[row.section] && row.id && row.options && !row.archived_at) bySection[row.section].push(row);
+  QUIZ_SECTIONS = QUESTION_SECTIONS.map(section => ({ ...section, questions: bySection[section.id].sort((a, b) => a.questionNumber - b.questionNumber) }));
+  ALL_QUIZ_QUESTIONS = QUIZ_SECTIONS.flatMap(section => section.questions);
+  allQuizQuestions = ALL_QUIZ_QUESTIONS;
+  QUIZ_TOTAL = ALL_QUIZ_QUESTIONS.length;
+  window.dispatchEvent(new Event('n3vjit:question-bank'));
+}
+
+export { QUIZ_SECTIONS as quizSections };
+export let ALL_QUIZ_QUESTIONS = QUIZ_SECTIONS.flatMap((s) => s.questions);
+export let allQuizQuestions = ALL_QUIZ_QUESTIONS;
+export let QUIZ_TOTAL = ALL_QUIZ_QUESTIONS.length;
 
 const DECK_META = {
   deck1: { title: 'Deck 1 · 44 câu đồng nghĩa', subtitle: '復習1' },

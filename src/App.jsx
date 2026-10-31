@@ -1,8 +1,9 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import Navbar from './components/Navbar.jsx'
 import { getTheme } from './utils/storage.js'
 import { useAuth } from './context/authContext.js'
+import { refreshQuestionBank } from './services/questionBank.js'
 
 const Dashboard = lazy(() => import('./components/Dashboard.jsx'))
 const StudyRoadmap = lazy(() => import('./components/StudyRoadmap.jsx'))
@@ -26,12 +27,65 @@ const AdminDashboard = lazy(() => import('./components/AdminDashboard.jsx'))
 
 export default function App() {
   const location = useLocation()
-  const { user, loading, sync, isAdmin, adminLoading, adminError } = useAuth()
+  const { user, loading, sync, isAdmin, adminLoading } = useAuth()
   const accountKey = user?.id || 'guest'
+  const inAdmin = location.pathname.startsWith('/admin')
   const hideNavbar = ['/login', '/register', '/forgot-password', '/reset-password', '/study', '/review/test'].includes(location.pathname) || location.pathname.startsWith('/auth/') || /^\/study\/[^/]+\/[^/]+\/(?:learn|summary)$/.test(location.pathname)
   const callbackParams = new URLSearchParams(location.hash.replace(/^#/, ''))
   const callbackQuery = new URLSearchParams(location.search)
   const [theme, setTheme] = useState(getTheme)
+  const [bankVersion, setBankVersion] = useState(0)
+  const [waitingWorker, setWaitingWorker] = useState(null)
+  const [updatingApp, setUpdatingApp] = useState(false)
+  const updatingAppRef = useRef(false)
+
+  useEffect(() => {
+    if (!('serviceWorker' in navigator) || !import.meta.env.PROD) return
+    let registration
+    let disposed = false
+    let reloadStarted = false
+    const announceWaiting = () => {
+      if (!disposed && registration?.waiting && navigator.serviceWorker.controller) setWaitingWorker(registration.waiting)
+    }
+    const watchInstalling = () => {
+      const worker = registration?.installing
+      if (!worker) return
+      worker.addEventListener('statechange', announceWaiting)
+    }
+    const checkForUpdate = () => registration?.update().catch(() => {})
+    const onVisibility = () => { if (document.visibilityState === 'visible') checkForUpdate() }
+    const onControllerChange = () => {
+      if (!updatingAppRef.current || reloadStarted) return
+      reloadStarted = true
+      window.location.reload()
+    }
+    navigator.serviceWorker.addEventListener('controllerchange', onControllerChange)
+    document.addEventListener('visibilitychange', onVisibility)
+    navigator.serviceWorker.register('/sw.js').then(value => {
+      if (disposed) return
+      registration = value
+      announceWaiting()
+      registration.addEventListener('updatefound', watchInstalling)
+      watchInstalling()
+      checkForUpdate()
+    }).catch(() => {})
+    return () => {
+      disposed = true
+      document.removeEventListener('visibilitychange', onVisibility)
+      navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange)
+      registration?.removeEventListener('updatefound', watchInstalling)
+    }
+  }, [])
+
+  const updateApp = () => {
+    if (!waitingWorker) return
+    updatingAppRef.current = true
+    setUpdatingApp(true)
+    waitingWorker.postMessage({ type: 'SKIP_WAITING' })
+  }
+
+  useEffect(() => { refreshQuestionBank() }, [])
+  useEffect(() => { const update = () => setBankVersion(value => value + 1); window.addEventListener('n3vjit:question-bank', update); return () => window.removeEventListener('n3vjit:question-bank', update) }, [])
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
@@ -54,13 +108,17 @@ export default function App() {
   }, [location.pathname, location.search])
 
   return (
-    <div className={`app-frame ${hideNavbar ? 'focused-frame' : ''}`}>
-      {!hideNavbar && <Navbar theme={theme} onTheme={setTheme} />}
+    <div className={`app-frame ${hideNavbar || inAdmin ? 'focused-frame' : ''}`}>
+      {waitingWorker && <div className="app-update-banner" role="status" aria-live="polite">
+        <span>Có phiên bản mới sẵn sàng.</span>
+        <button className="btn btn-primary" type="button" onClick={updateApp} disabled={updatingApp}>{updatingApp ? 'Đang cập nhật…' : 'Tải phiên bản mới'}</button>
+      </div>}
+      {!hideNavbar && !inAdmin && <Navbar theme={theme} onTheme={setTheme} />}
       <main className="app-content" id="main-content" tabIndex={-1}>
         {loading || (user && !sync.ready && location.pathname !== '/auth/callback') ? <div className="page-shell loading-state" role="status">{loading ? 'Đang khôi phục phiên đăng nhập…' : 'Đang tải tiến độ học tập…'}</div> :
         <Suspense fallback={<div className="page-shell loading-state" role="status">Đang mở bài học…</div>}>
           {location.pathname !== '/auth/callback' && (callbackParams.has('access_token') || callbackParams.has('error_code') || callbackQuery.has('error_code') || callbackQuery.has('error')) ? <Navigate to={`/auth/callback${location.search}${location.hash}`} replace /> :
-          <Routes>
+          <Routes key={bankVersion}>
             <Route path="/" element={<StudyRoadmap key={accountKey} />} />
             <Route path="/dashboard" element={<Dashboard key={accountKey} />} />
             <Route path="/quiz" element={new URLSearchParams(location.search).get('mode') === 'exam' ? <Navigate to="/exam" replace /> : <QuizEngine key={`${accountKey}:quiz${location.search}`} />} />
@@ -68,7 +126,7 @@ export default function App() {
             <Route path="/study/:stageId/:nodeId/learn" element={<MasteryStudy key={accountKey} />} />
             <Route path="/study/:stageId/:nodeId" element={<MasteryPreview key={accountKey} />} />
             <Route path="/study" element={<Navigate to="/" replace />} />
-            <Route path="/admin" element={!user ? <Navigate to="/login" replace /> : adminLoading ? <div className="page-shell loading-state" role="status">Đang kiểm tra quyền quản trị…</div> : isAdmin ? <AdminDashboard /> : user.email?.toLowerCase() === 'nguyeenhuynhlong@gmail.com' ? <section className="page-shell panel admin-setup-notice"><h1>Chưa bật được quyền quản trị</h1><p>Chạy migration <code>supabase/migrations/20261027_admin_roles.sql</code> trong Supabase SQL Editor. Nếu tài khoản chưa tồn tại lúc chạy migration, hãy xác minh đúng tài khoản rồi cấp role bằng câu lệnh một lần:</p><pre>{`insert into n3vjit_private.admin_roles(user_id)\nselect id from auth.users where lower(email) = 'nguyeenhuynhlong@gmail.com'\non conflict (user_id) do nothing;`}</pre><p>{adminError ? 'Nếu vừa chạy migration, tải lại trang sau khi Supabase hoàn tất.' : 'Chỉ project owner nên chạy câu lệnh cấp role sau khi đã xác minh chủ tài khoản.'}</p></section> : <Navigate to="/" replace />} />
+            <Route path="/admin/*" element={!user ? <Navigate to="/login" replace /> : adminLoading ? <div className="page-shell loading-state" role="status">Đang kiểm tra quyền quản trị…</div> : isAdmin ? <AdminDashboard bankVersion={bankVersion} /> : <Navigate to="/" replace />} />
             <Route path="/exam" element={<MockExam key={`${accountKey}:exam${location.search}`} />} />
             <Route path="/dokkai" element={<DokkaiView key={accountKey} />} />
             <Route path="/choukai" element={<ChoukaiView key={accountKey} />} />

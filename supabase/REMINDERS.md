@@ -1,5 +1,7 @@
 # Cấu hình email nhắc giờ học
 
+Email giữ cấu hình hiện tại và không phụ thuộc Web Push. Xem [`docs/PUSH_NOTIFICATIONS.md`](../docs/PUSH_NOTIFICATIONS.md) để bật kênh push độc lập; migration push chưa được tự chạy.
+
 Frontend và backend đã có mã nguồn, nhưng chưa gửi email khi chưa cấu hình. Không cần dịch vụ email để chạy website hoặc dùng các tính năng học tập khác. Email xác nhận đăng ký/khôi phục mật khẩu của Supabase là luồng riêng.
 
 ## 1. Tạo dịch vụ gửi email khi bạn sẵn sàng
@@ -48,13 +50,13 @@ Chạy `setup-reminder-cron.sql`. Tác vụ gọi Edge Function mỗi phút; tá
 update public.n3vjit_reminder_runtime set enabled = true where id;
 ```
 
-Người học đăng nhập → Tài khoản → tải lại cài đặt, chọn ngày/giờ/múi giờ và tự bật email. Mặc định 20:00, múi giờ `Asia/Ho_Chi_Minh`, mọi ngày, **chưa bật gửi**. Để kiểm tra thực tế, dùng chính email đã xác nhận của bạn và tự bật một lịch vài phút sau thời điểm hiện tại. Sau khi kiểm tra có thể tắt lịch ngay trong tài khoản. Việc cấu hình backend không tự đăng ký mọi tài khoản nhận email.
+Người học đăng nhập → Tài khoản → tải lại cài đặt, bật từng ngày và đặt giờ riêng (mặc định 20:00), rồi tự bật email. Lịch luôn dùng múi giờ `Asia/Ho_Chi_Minh`; **chưa bật gửi** theo mặc định. Để kiểm tra thực tế, dùng chính email đã xác nhận của bạn và tự bật một lịch vài phút sau thời điểm hiện tại. Sau khi kiểm tra có thể tắt lịch ngay trong tài khoản. Việc cấu hình backend không tự đăng ký mọi tài khoản nhận email.
 
 Khi deploy lại code cần giữ tương thích payload trong cửa sổ retry; payload đầu tiên được lưu và dùng lại cùng `Idempotency-Key`. Đừng đổi nhà cung cấp trong lúc còn lượt gửi chưa kết thúc.
 
 ## Cách hoạt động và giới hạn
 
-- Lịch lưu trên server nên vẫn chạy khi đóng website. Giờ tính theo múi giờ IANA người học chọn, không phụ thuộc timezone của server. Ngày Chủ nhật có mã 0, thứ Hai 1…thứ Bảy 6.
+- Lịch lưu trên server nên vẫn chạy khi đóng website. Mỗi ngày có giờ riêng theo múi giờ `Asia/Ho_Chi_Minh`, không phụ thuộc timezone của server. Ngày Chủ nhật có mã 0, thứ Hai 1…thứ Bảy 6.
 - Một lượt nhắc cho mỗi tài khoản/ngày địa phương, kể cả thay đổi lịch hoặc khi đổi giờ mùa hè. Không bù dồn lịch quá 15 phút; hệ thống ngừng lâu có thể bỏ lỡ buổi nhắc.
 - Claim nguyên tử với lease 5 phút, tối đa 3 lần thử trong cửa sổ 15 phút, tối thiểu 2 phút giữa các lần gửi lỗi. Kiểm tra lại email, trạng thái bật và phiên bản lịch ngay trước gửi; lịch đã đổi sẽ hủy lượt cũ. Đổi lịch trong sát thời điểm gửi có thể không ngăn email đã chuyển cho nhà cung cấp.
 - Payload và mã idempotency được giữ nguyên khi retry. Resend giữ idempotency key 24 giờ, dài hơn cửa sổ retry của ứng dụng.

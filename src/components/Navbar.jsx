@@ -1,6 +1,6 @@
 import { NavLink, useLocation } from 'react-router-dom'
 import { useEffect, useState, useSyncExternalStore } from 'react'
-import { AlarmClock, BookOpen, ChevronRight, CircleUserRound, ClipboardCheck, GraduationCap, Headphones, Home, Layers3, LogIn, Menu, MessageCircle, Moon, PanelLeftClose, PanelLeftOpen, PenLine, ShieldCheck, Sun, X } from 'lucide-react'
+import { AlarmClock, BookOpen, ChevronRight, CircleUserRound, ClipboardCheck, GraduationCap, Headphones, Home, Layers3, LogIn, Menu, MessageCircle, Moon, PanelLeftClose, PanelLeftOpen, PenLine, Sun, X } from 'lucide-react'
 import { getMasteryProgress, setTheme as persistTheme } from '../utils/storage.js'
 import { weakMasteryCount } from '../utils/roadmapContent.js'
 import { useAuth } from '../context/authContext.js'
@@ -35,7 +35,7 @@ function Item({ to, label, icon: Icon, end = false, count = false, reviewCount =
 }
 
 export default function Navbar({ theme, onTheme }) {
-  const { user, loading, isAdmin, progressVersion } = useAuth()
+  const { user, loading, progressVersion } = useAuth()
   const location = useLocation()
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('n3vjit_sidebar_collapsed') === 'true')
   const [menuOpen, setMenuOpen] = useState(false)
@@ -71,13 +71,12 @@ export default function Navbar({ theme, onTheme }) {
         <p className="sidebar-label">HỌC TẬP</p>{renderItems(primaryLinks)}
         <p className="sidebar-label sidebar-label-spaced">LUYỆN KỸ NĂNG</p>{renderItems(skillLinks)}
         <p className="sidebar-label sidebar-label-spaced">CÔNG CỤ</p>{renderItems(toolLinks)}
-        {isAdmin && <><p className="sidebar-label sidebar-label-spaced">QUẢN TRỊ</p><Item to="/admin" label="Quản lý tài khoản" icon={ShieldCheck} /></>}
       </nav>
       <div className="sidebar-bottom">
         {!loading && <NavLink to={user ? '/account' : '/login'} title={user ? user.email : 'Đăng nhập'} className="sidebar-account">{user ? <CircleUserRound size={19} /> : <LogIn size={19} />}<span><strong>{user ? (user.user_metadata?.display_name || 'Tài khoản') : 'Đăng nhập'}</strong><small>{user ? user.email : 'Lưu tiến độ học tập'}</small>{user && <SyncStatus compact />}</span><ChevronRight size={16} /></NavLink>}
       </div>
     </aside>
-    {menuOpen && <div className="mobile-more-menu" id="mobile-more-menu" aria-label="Luyện kỹ năng và công cụ"><div className="mobile-more-header"><strong>Khám phá</strong><button type="button" aria-label="Đóng menu" onClick={() => setMenuOpen(false)}><X size={20}/></button></div><p className="sidebar-label">LUYỆN KỸ NĂNG</p>{renderItems(skillLinks)}<p className="sidebar-label sidebar-label-spaced">CÔNG CỤ</p>{renderItems(toolLinks)}{isAdmin && <><p className="sidebar-label sidebar-label-spaced">QUẢN TRỊ</p><Item to="/admin" label="Quản lý tài khoản" icon={ShieldCheck} onClick={() => setMenuOpen(false)} /></>}</div>}
+    {menuOpen && <div className="mobile-more-menu" id="mobile-more-menu" aria-label="Luyện kỹ năng và công cụ"><div className="mobile-more-header"><strong>Khám phá</strong><button type="button" aria-label="Đóng menu" onClick={() => setMenuOpen(false)}><X size={20}/></button></div><p className="sidebar-label">LUYỆN KỸ NĂNG</p>{renderItems(skillLinks)}<p className="sidebar-label sidebar-label-spaced">CÔNG CỤ</p>{renderItems(toolLinks)}</div>}
     <nav className="mobile-nav" aria-label="Điều hướng nhanh">
       {primaryLinks.map(({ to, label, icon: Icon, end }) => <NavLink key={to} to={to} end={end} onClick={() => setMenuOpen(false)} className={({ isActive }) => `mobile-nav-link${isActive ? ' active' : ''}`}><Icon size={19} aria-hidden="true" /><span>{label}</span>{to === '/review' && reviewCount > 0 && <b className="mobile-review-badge">{reviewCount}</b>}</NavLink>)}
       <button type="button" className={`mobile-nav-link${menuOpen || [...skillLinks, ...toolLinks].some(link => location.pathname === link.to) ? ' active' : ''}`} onClick={() => setMenuOpen(value => !value)} aria-expanded={menuOpen} aria-controls="mobile-more-menu"><Menu size={19} aria-hidden="true"/><span>Thêm</span></button>

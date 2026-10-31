@@ -34,6 +34,20 @@ test('phím xem trước và trợ giúp không ghi đè hành động nút khá
   assert.deepEqual([started, back, help], [1, 1, 1])
 })
 
+test('Space tiếp tục vòng học dở kể cả khi nút chính được focus', () => {
+  let started = 0, exited = 0
+  const state = { mode: 'preview', startOnSpace: true, onStart: () => started++, onExit: () => exited++ }
+  handleStudyShortcut(event(' '), state)
+  const primary = event(' ', { target: { closest: selector => selector.startsWith('button') || selector === '[data-shortcut-start]' ? {} : null } })
+  handleStudyShortcut(primary, state)
+  assert.equal(primary.prevented, true)
+  handleStudyShortcut(event(' ', { target: { closest: selector => selector.startsWith('button') ? {} : null } }), state)
+  handleStudyShortcut(event(' ', { target: { closest: selector => selector.startsWith('input') ? {} : null } }), state)
+  handleStudyShortcut(event('Enter'), state)
+  handleStudyShortcut(event('Escape'), state)
+  assert.deepEqual([started, exited], [3, 1])
+})
+
 test('phím giữ trên nút tiếp tục không gây kích hoạt mặc định', () => {
   let next = 0
   const e = event('Enter', { repeat: true, target: { closest: selector => selector === '[data-shortcut-advance]' ? {} : null } })

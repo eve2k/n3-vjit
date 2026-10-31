@@ -18,7 +18,7 @@ export function handleStudyShortcut(event, state, now = Date.now()) {
   if (state.helpOpen) return key === 'Escape' || key === '?' ? call(state.onHelp) : false
   if (key === '?' && state.onHelp) return call(state.onHelp)
   if (key === 'Escape') return call(state.onExit)
-  if (state.mode === 'preview') return enter && !interactive && state.onStart ? call(state.onStart) : false
+  if (state.mode === 'preview') return (enter && !interactive || space && state.startOnSpace && (!interactive || event.target?.closest?.('[data-shortcut-start]'))) && state.onStart ? call(state.onStart) : false
   if (key.toLowerCase() === 's' && state.onSpeak) return call(state.onSpeak)
   if (number && !state.answered && state.onChoose && number <= state.optionCount) return call(() => state.onChoose(number - 1))
   if ((enter || space) && state.answered && state.onAdvance && (!interactive || advanceButton)) {

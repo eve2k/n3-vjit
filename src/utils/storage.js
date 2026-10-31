@@ -339,7 +339,7 @@ export const recordSpacedAnswer = (question, correct, options) => {
   const records = getSpacedRepetition();
   const key = srsKey(question);
   const previous = records[key];
-  const isNew = !(getCompletedQuestions()[question.section] || []).includes(question.id);
+  const isNew = !(getCompletedQuestions()[question.section] || []).includes(question.id) && !getMasteryProgress().cards[key] && !getWrongQuestions()[question.section]?.[question.id];
   const next = scheduleReview(previous, correct, { ...options, isNew, studyPlan: getStudyRoadmap(), questionKey: key });
   if (next !== previous) {
     const updated = Object.assign(Object.create(null), records, { [key]: next });

@@ -52,6 +52,13 @@ export function nodeLearningDecision(keys, cards = {}, session = null) {
   return { action: 'summary', round: session.round, weakCount: 0 }
 }
 
+export function summaryRouteDecision(session) {
+  if (!session) return 'preview'
+  if (session.feedback || session.queue.length) return 'fallback'
+  if (session.completedRounds > 0) return 'summary'
+  return 'fallback'
+}
+
 export function enterNodeRound(keys, oldKeys, cards, session, now, updateId) {
   const decision = nodeLearningDecision(keys, cards, session)
   const flaggedOnly = decision.action === 'review' && keys.every(key => cards[key]?.level === 3 || needsRecheck(cards[key]))

@@ -71,7 +71,8 @@ Repository chỉ cần mã nguồn, tài nguyên trong `public/`, cấu hình v�
    ```
 
    Vì xác nhận email đang tắt, chỉ chạy câu lệnh này sau khi đã xác minh chủ email để tránh cấp quyền cho người đăng ký giả mạo địa chỉ. Admin có thể mở `/admin` để xem người dùng và cấp/thu hồi quyền; xác thực quyền và danh sách đều kiểm tra ở Supabase.
-7. Khởi động lại `npm run dev` sau khi thay đổi biến môi trường. Khi triển khai, khai báo hai biến công khai tương ứng trong môi trường build của hosting, rồi build lại.
+7. Sau migration phân quyền ở bước 6, chạy `supabase/migrations/20261029_question_bank.sql`. Migration tạo ngân hàng dùng chung, nhập 257 câu từ 5 bộ hiện tại theo ID cũ và bật RLS: đọc công khai, ghi/lưu trữ chỉ admin. Dữ liệu seed không ghi đè câu đã tồn tại.
+8. Khởi động lại `npm run dev` sau khi thay đổi biến môi trường. Khi triển khai, khai báo hai biến công khai tương ứng trong môi trường build của hosting, rồi build lại.
 
 Các trang: `/login`, `/register`, `/forgot-password`, `/reset-password`, `/auth/callback`, `/account`, `/study`, `/admin`. Đăng ký có kiểm tra mật khẩu nhập lại; hỗ trợ hiện/ẩn mật khẩu, gửi lại xác nhận, đặt lại mật khẩu và đăng xuất. Liên kết email được xử lý theo implicit flow dành cho ứng dụng trình duyệt; token được kiểm tra qua Supabase trước khi nhận phiên và fragment chứa token được xóa khỏi thanh địa chỉ.
 

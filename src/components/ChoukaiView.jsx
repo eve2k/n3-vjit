@@ -44,39 +44,41 @@ export default function ChoukaiView() {
   return (
     <div className="page-shell content-page choukai-page">
       <div className="page-heading"><div><p className="eyebrow">KỸ NĂNG · 聴解</p><h1>Luyện nghe</h1></div></div>
-      <p className="mb-4 text-sm text-[var(--muted)]">
-        Đề giấy không kèm file nghe. 問題4–5 có đáp án trong tài liệu tổng hợp; 問題1–3 dùng để xem lựa chọn/hình và gắn audio nếu bạn có.
+      <p className="listening-note">
+        Đề giấy không kèm file nghe. 問題4–5 có đáp án trong tài liệu tổng hợp; 問題1–3 chỉ có lựa chọn và hình. Nút giọng máy chỉ đọc lựa chọn, không phát bản thu của đề.
       </p>
-      <div className="mb-4 flex flex-wrap gap-2">
+      <div className="lesson-tabs mb-4 flex flex-wrap gap-2">
         {groups.map((g) => (
           <button
             key={g.key}
             type="button"
-            className={`rounded border px-2 py-1 text-sm ${group === g.key ? 'bg-[var(--accent)] text-[var(--accent-ink)]' : 'border-[var(--line)]'}`}
+            aria-pressed={group === g.key}
+            className={`btn ${group === g.key ? 'btn-primary' : 'btn-secondary'}`}
             onClick={() => { setGroup(g.key); setActiveIndex(0); clearPending() }}
           >
             {g.title}
           </button>
         ))}
       </div>
+      <h2 className="choukai-group-title">{groups.find((item) => item.key === group)?.title}</h2>
       <p className="keyboard-hint mb-4" aria-live="polite">Câu đang chọn: {activeIndex + 1} · {pendingChoice ? `Đáp án ${pendingChoice} · Space để trả lời` : '1–4 chọn đáp án · Space trả lời / chuyển câu'}</p>
-      <div className="space-y-3">
+      <div className="choukai-questions">
         {(items || []).map((q, index) => {
           const pick = picks[q.id]
           return (
-            <div key={q.id} id={`choukai-question-${q.id}`} onFocus={() => setActiveIndex(index)} onPointerDown={() => setActiveIndex(index)} className={`rounded-lg border border-[var(--line)] bg-[var(--card)] p-3 ${activeIndex === index ? 'shortcut-active' : ''}`}>
+            <div key={q.id} id={`choukai-question-${q.id}`} onFocus={() => setActiveIndex(index)} onPointerDown={() => setActiveIndex(index)} className={`panel choukai-question ${activeIndex === index ? 'shortcut-active' : ''}`}>
               <div className="mb-2 flex justify-between gap-2">
-                <p className="font-medium">
+                <h3 className="choukai-question-heading">
                   {q.n ? `${q.n}ばん` : `${q.questionNumber}ばん`}
                   {q.situation ? ` · ${q.situation}` : ''}
                   {q.prompt ? ` · ${q.prompt}` : ''}
                   {q.questionText ? ` · ${q.questionText}` : ''}
-                </p>
-                <SpeakButton text={Object.values(q.options || {}).join('。')} />
+                </h3>
+                <SpeakButton text={Object.values(q.options || {}).join('。')} label="Nghe lựa chọn (giọng máy)" />
               </div>
               {!Object.hasOwn(q.options || {}, q.correctAnswer) && <p className="listening-unscored">Chưa có đáp án · Không chấm tự động</p>}
               {q.image && (
-                <img src={q.image} alt="" className="mb-2 max-h-56 rounded border border-[var(--line)] object-contain" />
+                <img src={q.image} alt={`Hình minh họa câu ${q.n || q.questionNumber}`} className="mb-2 max-h-56 rounded border border-[var(--line)] object-contain" />
               )}
               <div className="grid gap-1">
                 {Object.entries(q.options || {}).map(([letter, text]) => {

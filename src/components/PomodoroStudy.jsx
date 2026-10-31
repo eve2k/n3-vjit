@@ -100,7 +100,7 @@ export default function PomodoroStudy() {
       <section className={`panel question-card pomodoro-learning-card ${resting ? 'pomodoro-resting' : ''}`} aria-labelledby="pomodoro-question-title">
         {resting && <div className="pomodoro-rest-overlay" role="status">Đang nghỉ Pomodoro · vị trí học được giữ nguyên</div>}
         <div className="question-meta"><span>{unit?.title} · {status?.status === 'familiar' ? 'Đang quen' : 'Chưa học'} · {new Set(progress.events.filter(event => event.cycleId === cycle.id).map(event => event.unitId)).size}/{stats.total} đã gặp</span>{question && <SpeakButton text={question.questionText} />}</div>
-        {question?.passageText && <details className="question-context" open><summary>Đoạn đọc</summary><p className="jp whitespace-pre-wrap">{question.passageText}</p></details>}
+        {question?.passageText && <details className="question-context" open><summary>Đoạn đọc</summary><p className="jp whitespace-pre-wrap"><QuestionText text={question.passageText} /></p></details>}
         {flashcardMode ? <>
           <h2 id="pomodoro-question-title" className="jp question-text">{unit.flashcard.front}</h2>
           {revealed && <div className="answer-feedback feedback-correct"><strong className="jp">{unit.flashcard.back}</strong>{unit.flashcard.extra && <p>{unit.flashcard.extra}</p>}</div>}

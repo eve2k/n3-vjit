@@ -1,11 +1,12 @@
 import QuestionText from './QuestionText.jsx'
+import FuriganaToggle from './FuriganaToggle.jsx'
 import { useState, useEffect, useRef } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, ArrowRight } from 'lucide-react'
 import { useAuth } from '../context/authContext.js'
 import { findLesson, lessonQuestions } from '../utils/roadmapContent.js'
 import { cardKey, enterNodeRound, nodeLearningDecision, answerCard, advanceAfterFeedback, LEVEL_LABELS, nodeStatus } from '../utils/masteryLearning.js'
-import { getMasteryProgress, saveMasteryProgress } from '../utils/storage.js'
+import { getMasteryProgress, recordSpacedAnswer, saveMasteryProgress } from '../utils/storage.js'
 import useStudyShortcuts from '../hooks/useStudyShortcuts.js'
 import { speakJapanese } from '../utils/tts.js'
 import { questionInstruction, plainQuestionText } from '../utils/questionMarkup.js'
@@ -63,9 +64,11 @@ function MasterySession({ stageId, nodeId, lesson }) {
   const options = session?.feedback?.options || shuffleOptions(question?.options, seed)
   const respond = letter => {
     if (!question || session.feedback) return
-    const result = answerCard(session, progress.cards, letter === question.correctAnswer, Date.now(), updateId())
+    const now = Date.now(), id = updateId(), correct = letter === question.correctAnswer
+    const result = answerCard(session, progress.cards, correct, now, id)
     result.session.feedback = { ...result.session.feedback, selected: letter, options }
-    save({ cards: result.cards, nodes: { ...progress.nodes, [key]: result.session } })
+    try { recordSpacedAnswer(question, correct, { now, reviewId: id }); save({ cards: result.cards, nodes: { ...progress.nodes, [key]: result.session } }) }
+    catch (error) { setError(error.message) }
   }
   const next = () => { const finished = session.queue.length === 0; const updated = advanceAfterFeedback(session, Date.now(), updateId(), progress.cards); if (save({ ...progress, nodes: { ...progress.nodes, [key]: updated } }) && finished) navigate(`/study/${stageId}/${nodeId}/summary`) }
   useStudyShortcuts({
@@ -80,12 +83,12 @@ function MasterySession({ stageId, nodeId, lesson }) {
   if (decision.action === 'summary') return <Navigate to={`/study/${stageId}/${nodeId}/summary`} replace />
   return <div className="page-shell mastery-study">
     <Link className="text-link" aria-keyshortcuts="Escape" to={`/study/${stageId}/${nodeId}`}><ArrowLeft size={16}/> Trở về bài học</Link>
-    <header className="mastery-study-head"><div><p className="eyebrow">{lesson.stage.title} · {lesson.stage.lessons[lesson.index]}</p><h1>Học bốn bậc</h1></div><div className="mastery-header-actions">{session && <span>Vòng {session.round}</span>}<button type="button" className="mastery-shortcuts-help" onClick={() => setHelpOpen(true)} aria-keyshortcuts="Shift+/" aria-label="Xem phím tắt">?</button></div></header>
+    <header className="mastery-study-head"><div><p className="eyebrow">{lesson.stage.title} · {lesson.stage.lessons[lesson.index]}</p><h1>Học bốn bậc</h1></div><div className="mastery-header-actions">{session && <span>Vòng {session.round}</span>}<FuriganaToggle disabled={stageId === 'kanji' || question?.section === 'renshuu3'} /><button type="button" className="mastery-shortcuts-help" onClick={() => setHelpOpen(true)} aria-keyshortcuts="Shift+/" aria-label="Xem phím tắt">?</button></div></header>
     {error && <div className="notice notice-error" role="alert">{error}</div>}
     {!session ? <section className="panel mastery-finish"><h2>Sẵn sàng học?</h2><p>Mỗi vòng giúp bạn củng cố kiến thức và theo dõi bốn bậc ghi nhớ.</p><button className="btn btn-primary" onClick={startRound}>Bắt đầu vòng 1</button></section> : !currentKey ? <section className="panel mastery-finish"><h2>{status.mastered ? 'Đã thành thạo bài học!' : `Hoàn thành vòng ${session.round}`}</h2><p>{status.mastered ? 'Tất cả thẻ đã đạt thành thạo.' : status.passed ? 'Bạn đã qua node. Bạn có thể học tiếp để củng cố.' : 'Tiếp tục vòng sau để củng cố các thẻ còn yếu.'}</p><p>{status.counts[3]}/{status.total} thẻ thành thạo</p>{!status.mastered && <button className="btn btn-primary" onClick={startRound}>Bắt đầu vòng tiếp <ArrowRight size={16}/></button>} <Link className="btn btn-secondary" to="/">Về lộ trình</Link></section> : !question ? <section className="panel mastery-finish"><p>Câu hỏi này không còn trong dữ liệu. Hãy quay về lộ trình.</p><Link to="/">Trở về lộ trình</Link></section> : <>
       <div className="mastery-progress" aria-label={`Đã trả lời ${session.answered} trên ${session.total} lượt trong vòng`}><span>{session.answered}/{session.total}</span><div><i style={{ width: `${session.total ? session.answered / session.total * 100 : 0}%` }}/></div></div>
-      <section className="panel mastery-question"><div className="mastery-question-top"><span className={`mastery-level lv${session.feedback?.previousLevel ?? progress.cards[currentKey]?.level ?? 0}`}>{LEVEL_LABELS[session.feedback?.previousLevel ?? progress.cards[currentKey]?.level ?? 0]}</span><span>{questionInstruction(question)}</span><SpeakButton text={question.questionText} shortcuts="S" /></div><h2 className="jp"><QuestionText text={question.questionText} /></h2><div className="mastery-answers">{options.map(([letter, text], index) => { const feedback = session.feedback; const answerClass = feedback ? letter === question.correctAnswer ? 'correct' : letter === feedback.selected ? 'wrong' : '' : ''; return <button className={`mastery-answer ${answerClass}`} key={letter} disabled={!!feedback} aria-keyshortcuts={String(index + 1)} onClick={() => respond(letter)}><b className="mastery-answer-key" aria-hidden="true">{index + 1}</b><span className="jp">{text}</span></button> })}</div>
-        {session.feedback && <div className={`mastery-feedback ${session.feedback.correct ? 'correct' : 'wrong'}`} role="status"><strong>{session.feedback.correct ? 'Chính xác!' : `Đáp án đúng: ${question.options[question.correctAnswer]}`}</strong><p>{LEVEL_LABELS[session.feedback.previousLevel]} → {LEVEL_LABELS[session.feedback.level]}</p>{!session.feedback.correct && question.explanation && <p>{question.explanation}</p>}<button className="btn btn-primary" data-shortcut-advance aria-keyshortcuts="Enter Space" onClick={next}>Tiếp tục <ArrowRight size={16}/></button></div>}
+      <section className="panel mastery-question"><div className="mastery-question-top">{!session.feedback && <span className={`mastery-level lv${progress.cards[currentKey]?.level ?? 0}`}>{LEVEL_LABELS[progress.cards[currentKey]?.level ?? 0]}</span>}<span>{questionInstruction(question)}</span><SpeakButton text={question.questionText} shortcuts="S" /></div><h2 className="jp"><QuestionText text={question.questionText} /></h2><div className="mastery-answers">{options.map(([letter, text], index) => { const feedback = session.feedback; const answerClass = feedback ? letter === question.correctAnswer ? 'correct' : letter === feedback.selected ? 'wrong' : '' : ''; return <button className={`mastery-answer ${answerClass}`} key={letter} disabled={!!feedback} aria-keyshortcuts={String(index + 1)} onClick={() => respond(letter)}><b className="mastery-answer-key" aria-hidden="true">{index + 1}</b><span className="jp">{text}</span></button> })}</div>
+        {session.feedback && <div className={`mastery-feedback ${session.feedback.correct ? 'correct' : 'wrong'}`} role="status"><strong>{session.feedback.correct ? 'Chính xác!' : `Đáp án đúng: ${question.options[question.correctAnswer]}`}</strong>{!session.feedback.correct && question.explanation && <p>{question.explanation}</p>}<button className="btn btn-primary" data-shortcut-advance aria-keyshortcuts="Enter Space" onClick={next}>Tiếp tục <ArrowRight size={16}/></button></div>}
       </section></>}
     {helpOpen && <div className="mastery-help-backdrop" onClick={() => setHelpOpen(false)}><section className="panel mastery-help-dialog" role="dialog" aria-modal="true" aria-labelledby="mastery-help-title" onClick={event => event.stopPropagation()}><h2 id="mastery-help-title">Phím tắt</h2><dl><div><dt>1–4</dt><dd>Chọn đáp án (kể cả bàn phím số)</dd></div><div><dt>Enter / Space</dt><dd>Qua câu sau khi đã trả lời</dd></div><div><dt>S</dt><dd>Phát âm câu hỏi</dd></div><div><dt>Esc</dt><dd>Thoát bài học</dd></div><div><dt>?</dt><dd>Mở hoặc đóng bảng phím tắt</dd></div></dl><button ref={helpCloseRef} className="btn btn-secondary" onClick={() => setHelpOpen(false)} aria-keyshortcuts="Escape">Đóng</button></section></div>}
   </div>
