@@ -35,7 +35,7 @@ export function createAuthClient({ url = '', publicKey = '', storage, fetchImpl 
     let data = null
     try { data = contentType.includes('json') ? await response.json() : null } catch { throw error('request_failed', response.status) }
     if (!response.ok) {
-      const failure = error(data?.error_code || data?.error || (typeof data?.message === 'string' && ['admin_required', 'last_admin', 'user_not_found'].includes(data.message) ? data.message : null) || (typeof data?.code === 'string' ? data.code : null) || (response.status === 401 ? 'session_not_found' : 'request_failed'), response.status)
+      const failure = error(data?.error_code || data?.error || (typeof data?.message === 'string' && ['admin_required', 'last_admin', 'user_not_found', 'invalid_exam_date'].includes(data.message) ? data.message : null) || (typeof data?.code === 'string' ? data.code : null) || (response.status === 401 ? 'session_not_found' : 'request_failed'), response.status)
       if (Number.isInteger(data?.retry_after)) failure.retryAfter = data.retry_after
       throw failure
     }
@@ -236,6 +236,18 @@ export function createAuthClient({ url = '', publicKey = '', storage, fetchImpl 
     },
     async setAdminRole(email, isAdmin) {
       return authorizedRequest('/rest/v1/rpc/n3vjit_admin_set_role', { method: 'POST', body: { p_email: email, p_is_admin: isAdmin } })
+    },
+    async getSharedExamDate() {
+      try {
+        if (!configured) return null
+        const response = await fetchImpl(`${baseUrl}/rest/v1/rpc/n3vjit_get_exam_date`, { method: 'POST', headers: { apikey: publicKey, 'Content-Type': 'application/json' }, body: '{}', signal: AbortSignal.timeout(8000) })
+        if (!response.ok) return null
+        const data = await response.json()
+        return typeof data === 'string' ? data : null
+      } catch { return null }
+    },
+    async setSharedExamDate(examDate) {
+      return authorizedRequest('/rest/v1/rpc/n3vjit_set_exam_date', { method: 'POST', body: { p_exam_date: examDate } })
     },
     async loadQuestionBank() {
       if (!configured) throw error('not_configured')

@@ -1,10 +1,11 @@
 import { questionInstruction } from '../utils/questionMarkup.js'
 import QuestionText from './QuestionText.jsx'
-import { useEffect, useRef, useState } from 'react'
-import { ArrowLeft, ArrowRight, CalendarDays, Check, ClipboardCheck, RotateCcw, Send, Trophy } from 'lucide-react'
+import RoadmapNodePanel from './RoadmapNodePanel.jsx'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { ArrowLeft, ArrowRight, CalendarDays, Check, ClipboardCheck, RotateCcw, Send, Trophy, X, Sparkles } from 'lucide-react'
 import { stages, stageQuestions, lessonQuestions, nodesFor, masteryStage, nodeId, stageProgress, continueLessonIndex, recommendedStageIndex, cardLevelCounts } from '../utils/roadmapContent.js'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { getCompletedQuestions, getMasteryProgress, getStudyRoadmap, markQuestionCompleted, addWrongQuestion, markWrongQuestionCorrect } from '../utils/storage.js'
+import { getCompletedQuestions, getMasteryProgress, markQuestionCompleted, addWrongQuestion, markWrongQuestionCorrect } from '../utils/storage.js'
 import { cardKey, needsConsolidation, nodeStatus, LEVEL_LABELS } from '../utils/masteryLearning.js'
 import { useAuth } from '../context/authContext.js'
 import { studyDay } from '../utils/spacedRepetition.js'
@@ -14,20 +15,28 @@ import { daysBetween, DEFAULT_EXAM_DATE, formatStudyDay } from '../utils/studyRo
 const STATE_LABELS = { mastered: 'Thành thạo', review: 'Cần ôn', complete: 'Đã hoàn thành', current: 'Học tiếp', available: 'Có thể học' }
 
 export default function StudyRoadmap() {
-  const { user } = useAuth()
+  const { user, client } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const checkpointStage = new URLSearchParams(location.search).get('checkpoint')
   const checkpointIndex = stages.findIndex(item => item.id === checkpointStage && !item.last)
   const [now, setNow] = useState(Date.now)
-  const examDate = getStudyRoadmap()?.examDate || DEFAULT_EXAM_DATE
+  const [sharedExamDate, setSharedExamDate] = useState(() => {
+    try { return localStorage.getItem('n3vjit_shared_exam_date') || DEFAULT_EXAM_DATE } catch { return DEFAULT_EXAM_DATE }
+  })
+  const examDate = sharedExamDate
   const daysLeft = daysBetween(studyDay(now), examDate)
   const countdown = daysLeft < 0 ? 'Ngày thi đã qua' : daysLeft === 0 ? 'Thi hôm nay' : `Còn ${daysLeft} ngày`
+  const [welcomeOpen, setWelcomeOpen] = useState(() => {
+    try { return sessionStorage.getItem('n3vjit_exam_welcome_dismissed') !== 'true' } catch { return true }
+  })
   const [selected, setSelected] = useState(() => checkpointIndex >= 0 ? checkpointIndex : recommendedStageIndex(getCompletedQuestions(), getMasteryProgress()))
   const [selectedNode, setSelectedNode] = useState(() => checkpointIndex >= 0 ? stages[checkpointIndex].lessons.length : 0)
-  const [panelVisible, setPanelVisible] = useState(() => checkpointIndex >= 0)
+  const [overviewVisible, setOverviewVisible] = useState(true)
+  const [panelVisible, setPanelVisible] = useState(false)
   const [panelMounted, setPanelMounted] = useState(() => checkpointIndex >= 0)
   const panelRef = useRef(null)
+  const nodeRefs = useRef([])
   const [session, setSession] = useState(() => checkpointIndex >= 0 ? { stage: stages[checkpointIndex], lessonIndex: 0, checkpoint: true, questions: stageQuestions(stages[checkpointIndex]) } : null)
   const [index, setIndex] = useState(0)
   const [answers, setAnswers] = useState({})
@@ -36,6 +45,25 @@ export default function StudyRoadmap() {
   const completed = getCompletedQuestions()
   const mastery = getMasteryProgress()
   useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 30_000); return () => clearInterval(timer) }, [])
+  useEffect(() => {
+    let active = true
+    const refresh = async () => {
+      const value = await client.getSharedExamDate()
+      if (!active || typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value) || !Number.isFinite(Date.parse(`${value}T00:00:00Z`))) return
+      setSharedExamDate(value)
+      try { localStorage.setItem('n3vjit_shared_exam_date', value) } catch {}
+    }
+    const refreshTimer = setInterval(() => { void refresh() }, 5 * 60_000)
+    window.addEventListener('n3vjit:shared-exam-date', refresh)
+    window.addEventListener('storage', refresh)
+    refresh()
+    return () => {
+      active = false
+      clearInterval(refreshTimer)
+      window.removeEventListener('n3vjit:shared-exam-date', refresh)
+      window.removeEventListener('storage', refresh)
+    }
+  }, [client])
   const current = session?.questions[index]
   const answersCount = Object.keys(answers).length
   const stage = stages[selected]
@@ -47,6 +75,10 @@ export default function StudyRoadmap() {
   const selectedMastery = picked.kind === 'lesson' && masteryStage(stage) ? nodeStatus(selectedQuestions.map(cardKey), mastery.cards, mastery.nodes[`${stage.id}:${nodeId(picked.index)}`]?.completedRounds || 0) : null
   const summary = stageProgress(stage, completedIds, mastery)
   const continueIndex = continueLessonIndex(stage, completedIds, mastery)
+  const recommendedStage = stages[recommendedStageIndex(completedIds, mastery)]
+  const recommendedIndex = continueLessonIndex(recommendedStage, completedIds, mastery)
+  const welcomeStage = recommendedStage
+  const welcomeLessonIndex = recommendedIndex
   const selectedSession = picked.kind === 'lesson' ? mastery.nodes[`${stage.id}:${nodeId(picked.index)}`] : null
   const selectedLevels = selectedMastery ? cardLevelCounts(selectedQuestions, mastery.cards) : null
   const selectedStarted = Boolean(selectedSession || (selectedLevels && selectedLevels.unseen < selectedLevels.total))
@@ -54,7 +86,14 @@ export default function StudyRoadmap() {
   const selectedButton = !selectedStarted && selectedDonePlaceholder(selectedQuestions, completedIds) === 0 ? 'Bắt đầu học' : selectedFinished ? 'Ôn lại' : 'Ôn tiếp'
   const selectedDone = picked.kind === 'lesson' ? selectedQuestions.filter(q => (completedIds[q.section] || []).includes(q.id)).length : 0
   const selectedState = picked.kind !== 'lesson' ? '' : selectedMastery?.mastered ? 'mastered' : selectedMastery && selectedQuestions.some(q => needsConsolidation(mastery.cards[cardKey(q)])) ? 'review' : selectedFinished ? 'complete' : picked.index === continueIndex ? 'current' : 'available'
-  const selectedStateLabel = STATE_LABELS[selectedState]
+  const selectedReviewCount = picked.kind === 'lesson' ? selectedQuestions.filter(q => needsConsolidation(mastery.cards[cardKey(q)])).length : 0
+  const selectedStateLabel = selectedState === 'review' ? `${selectedReviewCount} thẻ cần ôn` : STATE_LABELS[selectedState]
+  const checkpointDone = summary.lessons > 0 && summary.passed === summary.lessons
+  const nextStage = stages[selected + 1]
+  const panelActionLabel = picked.kind === 'lesson'
+    ? stage.id === 'exam' ? 'Bắt đầu thi thử' : `${selectedButton} · ${selectedMastery ? selectedMastery.total : selectedQuestions.length} ${selectedMastery ? 'thẻ' : 'câu'}`
+    : picked.kind === 'checkpoint' ? checkpointDone ? 'Kiểm tra lại chặng' : 'Bắt đầu kiểm tra chặng'
+      : nextStage ? `Sang chặng ${nextStage.title}` : ''
 
   const start = (targetStage, lessonIndex, checkpoint = false) => {
     const pool = (checkpoint ? stageQuestions(targetStage) : lessonQuestions(targetStage, lessonIndex)).filter(usableQuestion)
@@ -88,7 +127,9 @@ export default function StudyRoadmap() {
   useEffect(() => {
     if (!panelMounted) return undefined
     const onPointerDown = event => {
-      if (!panelRef.current?.contains(event.target)) setPanelVisible(false)
+      if (!(event.target instanceof Element)) return
+      if (panelRef.current?.contains(event.target) || event.target.closest('.map-node-group')) return
+      setPanelVisible(false)
     }
     const onKeyDown = event => { if (event.key === 'Escape') setPanelVisible(false) }
     document.addEventListener('pointerdown', onPointerDown)
@@ -99,8 +140,30 @@ export default function StudyRoadmap() {
     }
   }, [panelMounted])
 
-  const showPanel = () => { setPanelMounted(true); setPanelVisible(true) }
+  const showPanel = () => { if (panelMounted) setPanelVisible(true); else setPanelMounted(true) }
   const hidePanel = () => setPanelVisible(false)
+  const unmountPanel = useCallback(() => setPanelMounted(false), [])
+  const dismissWelcome = () => {
+    setWelcomeOpen(false)
+    try { sessionStorage.setItem('n3vjit_exam_welcome_dismissed', 'true') } catch {}
+  }
+  useEffect(() => {
+    if (!welcomeOpen) return undefined
+    const closeOnEscape = event => { if (event.key === 'Escape') dismissWelcome() }
+    document.addEventListener('keydown', closeOnEscape)
+    return () => document.removeEventListener('keydown', closeOnEscape)
+  }, [welcomeOpen])
+  const continueFromWelcome = () => {
+    const targetIndex = stages.indexOf(welcomeStage)
+    if (targetIndex >= 0) {
+      setSelected(targetIndex)
+      setSelectedNode(welcomeStage.last ? 0 : welcomeLessonIndex)
+      if (welcomeStage.last) navigate('/exam')
+      else if (masteryStage(welcomeStage)) navigate(`/study/${welcomeStage.id}/${nodeId(welcomeLessonIndex)}`)
+      else start(welcomeStage, welcomeLessonIndex)
+    }
+    dismissWelcome()
+  }
 
   if (session) return <div className="page-shell roadmap-page"><button className="text-link mb-5" type="button" onClick={close}><ArrowLeft size={16}/> Trở về lộ trình</button>
     <div className="page-heading"><div><p className="eyebrow">{session.checkpoint ? 'KIỂM TRA CHẶNG' : 'BÀI HỌC'} · {session.stage.title}</p><h1>{session.checkpoint ? `Kiểm tra chặng ${session.stage.title}` : `${session.stage.title} · ${session.stage.lessons[session.lessonIndex]}`}</h1><p className="page-description">{result ? 'Kết quả bài làm' : `Câu ${index + 1}/${session.questions.length} · Kết quả chỉ hiện sau khi nộp bài.`}</p></div></div>
@@ -126,21 +189,20 @@ export default function StudyRoadmap() {
   }
 
   return <div className="page-shell roadmap-page roadmap-overview">
+    {welcomeOpen && <div className="exam-welcome-backdrop"><section className="exam-welcome" role="dialog" aria-modal="true" aria-labelledby="exam-welcome-title"><button type="button" className="exam-welcome-close" aria-label="Đóng thông báo" onClick={dismissWelcome}><X size={21} aria-hidden="true"/></button><p className="eyebrow">LỘ TRÌNH CHINH PHỤC N3 VJIT</p><p className="exam-welcome-count">{daysLeft < 0 ? 'Ngày thi đã qua' : daysLeft === 0 ? 'Hôm nay là ngày thi!' : <>Còn <strong>{daysLeft}</strong> ngày</>}</p><p className="exam-welcome-date">Ngày thi dự kiến: {formatStudyDay(examDate)}</p><div className="exam-welcome-next"><span className="home-hero-kicker"><Sparkles size={15} aria-hidden="true"/> HỌC TIẾP THEO</span><h2 id="exam-welcome-title">{welcomeStage.last ? 'Luyện đề thi thử' : `${welcomeStage.title} · ${welcomeStage.lessons[welcomeLessonIndex]}`}</h2><p>{welcomeStage.last ? 'Các chặng học đã hoàn tất. Hãy tiếp tục luyện đề.' : `Tiếp tục chặng ${welcomeStage.title} theo lộ trình của bạn.`}</p></div><button type="button" className="btn btn-primary exam-welcome-continue" onClick={continueFromWelcome}>{welcomeStage.last ? 'Bắt đầu thi thử' : 'Học tiếp tục'}<ArrowRight size={18} aria-hidden="true"/></button></section></div>}
     <header className="roadmap-compact-head"><h1>Chứng chỉ tiếng Nhật VJIT</h1><div className="roadmap-countdown"><CalendarDays size={16} aria-hidden="true"/><strong>{countdown}</strong><span>· {formatStudyDay(examDate)}</span></div></header>
     <nav className="roadmap-tabs" aria-label="Các chặng">{stages.map((item, i) => <button key={item.id} type="button" className={selected === i ? 'active' : ''} aria-pressed={selected === i} onClick={() => { selectStage(i); hidePanel() }}><b>{item.title}</b><small>{item.id === 'exam' ? '3 đề thi' : `${completedLessonCount(item, completedIds, mastery)}/${item.lessons.length} bài`}</small></button>)}</nav>
     <div className="roadmap-layout">
-    <aside className="roadmap-left-column panel" aria-label="Tổng quan chặng"><p className="eyebrow">TIẾN ĐỘ CHẶNG</p><h2>Chặng {stage.title}</h2>{stage.last ? <p>{stage.lessons.length} đề thi thử</p> : <><p>{summary.passed}/{summary.lessons} bài đã qua</p>{masteryStage(stage) ? <><div className="stage-level-bar" role="img" aria-label={[`Chưa học: ${summary.unseen}`, ...LEVEL_LABELS.map((label, index) => `${label}: ${summary.counts[index]}`)].join(', ')}>{summary.counts.map((count, index) => <span key={index} style={{ width: `${summary.total ? count / summary.total * 100 : 0}%`, background: `var(--mastery-${index})` }}/>)}</div><div className="stage-level-legend"><span><i className="unseen-dot"/>Chưa học: {summary.unseen}</span>{summary.counts.map((count, index) => <span key={index}><i style={{ background: `var(--mastery-${index})` }}/>{LEVEL_LABELS[index]}: {count}</span>)}</div></> : <div className="stage-level-bar" role="progressbar" aria-valuemin={0} aria-valuemax={summary.lessons} aria-valuenow={summary.passed} aria-label="Bài đã qua"><span style={{ width: `${summary.lessons ? summary.passed / summary.lessons * 100 : 0}%`, background: 'var(--accent)' }}/></div>}</>}<button type="button" className="btn btn-primary roadmap-continue" onClick={continueStudy}>{stage.last ? 'Tiếp tục: Thi thử' : `Tiếp tục: ${stage.lessons[continueIndex]}`}</button></aside>
+    {overviewVisible ? <aside className="roadmap-left-column panel" aria-label="Tổng quan chặng"><button type="button" className="roadmap-overview-close" aria-label="Đóng bảng tiến độ chặng" title="Đóng" onClick={() => setOverviewVisible(false)}><X size={17} aria-hidden="true"/></button><p className="eyebrow">TIẾN ĐỘ CHẶNG</p><h2>Chặng {stage.title}</h2>{stage.last ? <p>{stage.lessons.length} đề thi thử</p> : <><p>{summary.passed}/{summary.lessons} bài đã qua</p>{masteryStage(stage) ? <><div className="stage-level-bar" role="img" aria-label={[`Chưa học: ${summary.unseen}`, ...LEVEL_LABELS.map((label, index) => `${label}: ${summary.counts[index]}`)].join(', ')}>{summary.counts.map((count, index) => <span key={index} style={{ width: `${summary.total ? count / summary.total * 100 : 0}%`, background: `var(--mastery-${index})` }}/>)}</div><div className="stage-level-legend">{summary.unseen > 0 && <span><i className="unseen-dot"/>Chưa học: {summary.unseen}</span>}{summary.counts.map((count, index) => count > 0 ? <span key={index}><i style={{ background: `var(--mastery-${index})` }}/>{LEVEL_LABELS[index]}: {count}</span> : null)}</div></> : <div className="stage-level-bar" role="progressbar" aria-valuemin={0} aria-valuemax={summary.lessons} aria-valuenow={summary.passed} aria-label="Bài đã qua"><span style={{ width: `${summary.lessons ? summary.passed / summary.lessons * 100 : 0}%`, background: 'var(--accent)'}}/></div>}</>}<button type="button" className="btn btn-primary roadmap-continue" onClick={continueStudy}>{stage.last ? 'Tiếp tục: Thi thử' : `Tiếp tục: ${stage.lessons[continueIndex]}`}</button></aside> : <button type="button" className="btn roadmap-overview-open" onClick={() => setOverviewVisible(true)}>Hiện tiến độ chặng</button>}
     <div className="roadmap-map-scroll"><svg className="roadmap-map" viewBox={`130 0 420 ${nodeY(nodes.length - 1) + 60}`} role="group" aria-label={`Con đường chặng ${stage.title}`}>
       {nodes.slice(0, -1).map((node, i) => { const x1 = nodeX(i), y1 = nodeY(i), x2 = nodeX(i + 1), y2 = nodeY(i + 1); return <path key={`path-${i}`} d={trimmedPath(x1, y1, x2, y2, 31, 31)} className="map-path" /> })}
-      {nodes.map((node, i) => { const x = nodeX(i), y = nodeY(i), active = i === selectedNode, checkpointDone = node.kind === 'checkpoint' && summary.lessons > 0 && summary.passed === summary.lessons, qs = node.kind === 'lesson' ? lessonQuestions(stage, node.index) : [], doneCount = qs.filter(q => (completedIds[q.section] || []).includes(q.id)).length, levelDistribution = node.kind === 'lesson' && masteryStage(stage) ? cardLevelCounts(qs, mastery.cards) : null, masteryStatus = node.kind === 'lesson' && masteryStage(stage) ? nodeStatus(qs.map(cardKey), mastery.cards, mastery.nodes[`${stage.id}:${nodeId(node.index)}`]?.completedRounds || 0) : null, isMastered = Boolean(masteryStatus?.mastered), isPassed = masteryStatus ? masteryStatus.passed : qs.length > 0 && doneCount === qs.length, needsReview = Boolean(masteryStatus && qs.some(q => needsConsolidation(mastery.cards[cardKey(q)]))), isCurrent = summary.passed < summary.lessons && continueIndex === node.index, state = node.kind !== 'lesson' ? '' : isMastered ? 'mastered' : needsReview ? 'review' : isPassed ? 'complete' : isCurrent ? 'current' : 'available', stateLabel = STATE_LABELS[state], labelLeft = x >= 340, labelX = x + (labelLeft ? -42 : 42), anchor = labelLeft ? 'end' : 'start'; const click = () => { setSelectedNode(i); showPanel(); if (stage.id === 'exam' && node.kind === 'lesson') window.location.assign('/exam') }; return <g key={`${stage.id}-${node.kind}-${i}`} className="map-node-group" style={{ '--node-index': i }} role="button" tabIndex="0" aria-label={`${node.title}${stateLabel ? ` · ${stateLabel}` : checkpointDone ? ' · Đã hoàn thành chặng' : ''}`} aria-pressed={active} onClick={click} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); click() } }}>
+      {nodes.map((node, i) => { const x = nodeX(i), y = nodeY(i), active = i === selectedNode, checkpointDone = node.kind === 'checkpoint' && summary.lessons > 0 && summary.passed === summary.lessons, qs = node.kind === 'lesson' ? lessonQuestions(stage, node.index) : [], doneCount = qs.filter(q => (completedIds[q.section] || []).includes(q.id)).length, levelDistribution = node.kind === 'lesson' && masteryStage(stage) ? cardLevelCounts(qs, mastery.cards) : null, masteryStatus = node.kind === 'lesson' && masteryStage(stage) ? nodeStatus(qs.map(cardKey), mastery.cards, mastery.nodes[`${stage.id}:${nodeId(node.index)}`]?.completedRounds || 0) : null, isMastered = Boolean(masteryStatus?.mastered), isPassed = masteryStatus ? masteryStatus.passed : qs.length > 0 && doneCount === qs.length, needsReview = Boolean(masteryStatus && qs.some(q => needsConsolidation(mastery.cards[cardKey(q)]))), isCurrent = summary.passed < summary.lessons && continueIndex === node.index, state = node.kind !== 'lesson' ? '' : isMastered ? 'mastered' : needsReview ? 'review' : isPassed ? 'complete' : isCurrent ? 'current' : 'available', stateLabel = STATE_LABELS[state], labelLeft = x >= 340, labelX = x + (labelLeft ? -42 : 42), anchor = labelLeft ? 'end' : 'start'; const click = () => { setSelectedNode(i); showPanel() }; return <g key={`${stage.id}-${node.kind}-${i}`} ref={element => { nodeRefs.current[i] = element }} className="map-node-group" style={{ '--node-index': i }} role="button" tabIndex="0" aria-label={`${node.title}${stateLabel ? ` · ${stateLabel}` : checkpointDone ? ' · Đã hoàn thành chặng' : ''}`} aria-pressed={active} aria-haspopup="dialog" aria-expanded={active && panelVisible} onClick={click} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); click() } }}>
+        {active && <circle cx={x} cy={y} r={node.kind === 'checkpoint' ? 40 : 35} className="map-node-selection-ring" aria-hidden="true" />}
         {node.kind === 'checkpoint' ? <><rect x={x-25} y={y-25} width="50" height="50" rx="10" className={`map-checkpoint${active ? ' selected' : ''}${checkpointDone ? ' is-complete' : ''}`} />{checkpointDone ? <Check x={x-10} y={y-10} width="20" height="20" className="map-checkpoint-complete-mark" /> : <text x={x} y={y+7} textAnchor="middle" className="map-checkpoint-mark">合</text>}</> : node.kind === 'end' ? <><circle cx={x} cy={y} r="22" className={`map-end${active ? ' selected' : ''}`} />{selected < stages.length-1 ? <path d={`M${x-5} ${y-7}l8 7-8 7`} className="map-lock"/> : <Trophy x={x-9} y={y-9} width="18" height="18" className="map-lock"/>}</> : <><circle cx={x} cy={y} r="22" className={`map-lesson-node state-${state}${active ? ' selected' : ''}`} />{isMastered ? <Trophy x={x-9} y={y-9} width="18" height="18" className="map-done-check"/> : state === 'complete' ? <Check x={x-9} y={y-9} width="18" height="18" className="map-done-check"/> : state === 'review' ? <RotateCcw x={x-9} y={y-9} width="18" height="18" className="map-review-icon"/> : state === 'current' ? <ArrowRight x={x-9} y={y-9} width="18" height="18" className="map-current-icon"/> : <text x={x} y={y+5} textAnchor="middle" className="map-node-number">{i+1}</text>}{levelDistribution && levelDistribution.unseen < levelDistribution.total && <g transform={`rotate(-90 ${x} ${y})`}><circle cx={x} cy={y} r="32" fill="none" stroke="var(--line)" strokeWidth="2.5"/>{levelDistribution.counts.map((n, level) => { const r = 32, circumference = 2 * Math.PI * r, offset = levelDistribution.counts.slice(0, level).reduce((a, b) => a + b, 0); return n ? <circle key={level} cx={x} cy={y} r={r} fill="none" stroke={`var(--mastery-${level})`} strokeWidth="2.5" strokeDasharray={`${circumference * n / levelDistribution.total} ${circumference}`} strokeDashoffset={-circumference * offset / levelDistribution.total}/> : null })}</g>}</>}
         <text x={labelX} y={y-3} textAnchor={anchor} className="map-node-title">{node.title}</text><text x={labelX} y={y+14} textAnchor={anchor} className="map-node-subtitle">{node.kind === 'lesson' ? `${stateLabel} · ${qs.length} câu` : node.kind === 'checkpoint' ? `${checkpointQuestions.length} câu · kiểm tra ngay` : selected < stages.length-1 ? 'Sang chặng tiếp' : 'Chúc bạn thi tốt'}</text>
       </g> })}
     </svg></div>
-    <div className="roadmap-right-column">{panelMounted && <aside ref={panelRef} className={`roadmap-selected-panel${panelVisible ? ' is-visible' : ' is-closing'}`} aria-live="polite" onTransitionEnd={event => { if (event.target === event.currentTarget && !panelVisible) setPanelMounted(false) }}>
-      <h2>{picked.kind === 'lesson' ? `${stage.title} · ${picked.title}` : picked.title}</h2>
-      {picked.kind === 'lesson' ? <><p className={`roadmap-state state-${selectedState}`}>{selectedState === 'mastered' ? <Trophy size={15} aria-hidden="true" /> : selectedState === 'review' ? <RotateCcw size={15} aria-hidden="true" /> : selectedState === 'complete' ? <Check size={15} aria-hidden="true" /> : <ArrowRight size={15} aria-hidden="true" />}{selectedStateLabel}</p>{selectedLevels && <div className="roadmap-levels"><span><i className="unseen-dot"/>Chưa học: {selectedLevels.unseen}</span>{selectedLevels.counts.map((count, level) => <span key={level}><i style={{ background: `var(--mastery-${level})` }}/>{LEVEL_LABELS[level]}: {count}</span>)}</div>}<p>{stage.id === 'exam' ? 'Mở đề thi thử tổng hợp.' : selectedMastery ? `${selectedMastery.total} thẻ · ${selectedMastery.mastered ? 'Thành thạo hoàn toàn' : selectedMastery.passed ? 'Đã qua node' : selectedStarted ? 'Đang học' : 'Chưa học'}.` : `${selectedQuestions.length} câu · ${selectedDone} câu đã làm.`}</p>{selectedSession && !selectedFinished && <p className="roadmap-round">Đang học vòng {selectedSession.round}</p>}<button type="button" className="btn" onClick={nodeAction}>{stage.id === 'exam' ? 'Bắt đầu thi thử' : selectedButton}</button></> : picked.kind === 'checkpoint' ? <><p>Bài kiểm tra gồm {checkpointQuestions.length} câu từ tất cả node nhỏ trong chặng. Bạn có thể bắt đầu ngay; đáp án và điểm chỉ hiện sau khi nộp.</p><button type="button" className="btn seal" onClick={nodeAction}>{summary.lessons > 0 && summary.passed === summary.lessons ? 'Kiểm tra lại chặng' : 'Bắt đầu kiểm tra chặng'}</button></> : <><p>{selected < stages.length-1 ? `Bạn có thể chuyển sang ${stages[selected+1].title} bất cứ lúc nào.` : 'Hoàn tất lộ trình và luyện đề trước ngày thi.'}</p>{selected < stages.length-1 && <button type="button" className="btn" onClick={nodeAction}>Sang chặng {stages[selected+1].title}</button>}</>}
-    </aside>}</div>
+    {panelMounted && <RoadmapNodePanel panelRef={panelRef} visible={panelVisible} selectedNode={selectedNode} nodeRefs={nodeRefs} stage={stage} node={picked} nextStage={nextStage} stateKey={selectedState} stateLabel={selectedStateLabel} levels={selectedLevels} mastery={selectedMastery} session={selectedSession} finished={selectedFinished} questions={selectedQuestions} done={selectedDone} actionLabel={panelActionLabel} checkpointDone={checkpointDone} checkpointQuestions={checkpointQuestions} onAction={nodeAction} onClose={hidePanel} onExited={unmountPanel} />}
     </div>
     <section className="roadmap-separate" hidden><p className="eyebrow">KHU VỰC RIÊNG</p><div><a href="/choukai" className="btn ghost">Nghe · chưa có file âm thanh</a><a href="/sakubun" className="btn ghost">Viết · tự luyện</a></div></section>
   </div>

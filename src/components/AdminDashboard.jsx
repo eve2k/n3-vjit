@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom'
-import { ArrowLeft, BookOpen, RefreshCw, ShieldCheck, UserRound } from 'lucide-react'
+import { ArrowLeft, BookOpen, RefreshCw, ShieldCheck, UserRound, CalendarDays } from 'lucide-react'
 import { useAuth } from '../context/authContext.js'
+import { DEFAULT_EXAM_DATE, validDay } from '../utils/studyRoadmap.js'
 import QuestionBankAdmin from './QuestionBankAdmin.jsx'
 
 function adminErrorMessage(error) {
@@ -15,7 +16,33 @@ function adminErrorMessage(error) {
 
 export default function AdminDashboard({ bankVersion }) {
   const location = useLocation()
-  return <div className="admin-layout"><header className="admin-topbar"><Link to="/" className="admin-brand"><span className="sidebar-brand-mark"><span>C2J</span></span><span><strong>C2J Study</strong><small>KHÔNG GIAN QUẢN TRỊ</small></span></Link><Link to="/" className="btn btn-secondary"><ArrowLeft size={15} />Quay lại học</Link></header><div className="admin-workspace"><aside className="admin-nav" aria-label="Điều hướng quản trị"><p>QUẢN TRỊ</p><Link className={location.pathname === '/admin' ? 'active' : ''} to="/admin"><ShieldCheck size={17}/>Tài khoản</Link><Link className={location.pathname.startsWith('/admin/questions') ? 'active' : ''} to="/admin/questions"><BookOpen size={17}/>Ngân hàng câu hỏi</Link></aside><main className="admin-main"><Routes><Route index element={<AdminUsers />} /><Route path="questions" element={<QuestionBankAdmin key={bankVersion} />} /><Route path="*" element={<Navigate to="/admin" replace />} /></Routes></main></div></div>
+  return <div className="admin-layout"><header className="admin-topbar"><Link to="/" className="admin-brand"><span className="sidebar-brand-mark"><span>C2J</span></span><span><strong>C2J Study</strong><small>KHÔNG GIAN QUẢN TRỊ</small></span></Link><Link to="/" className="btn btn-secondary"><ArrowLeft size={15} />Quay lại học</Link></header><div className="admin-workspace"><aside className="admin-nav" aria-label="Điều hướng quản trị"><p>QUẢN TRỊ</p><Link className={location.pathname === '/admin' ? 'active' : ''} to="/admin"><ShieldCheck size={17}/>Tài khoản</Link><Link className={location.pathname.startsWith('/admin/questions') ? 'active' : ''} to="/admin/questions"><BookOpen size={17}/>Ngân hàng câu hỏi</Link><Link className={location.pathname.startsWith('/admin/roadmap') ? 'active' : ''} to="/admin/roadmap"><CalendarDays size={17}/>Cài đặt lộ trình</Link></aside><main className="admin-main"><Routes><Route index element={<AdminUsers />} /><Route path="questions" element={<QuestionBankAdmin key={bankVersion} />} /><Route path="roadmap" element={<AdminRoadmapSettings />} /><Route path="*" element={<Navigate to="/admin" replace />} /></Routes></main></div></div>
+}
+
+function AdminRoadmapSettings() {
+  const { client } = useAuth()
+  const [examDate, setExamDate] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [busy, setBusy] = useState(false)
+  const [notice, setNotice] = useState(null)
+  useEffect(() => {
+    let active = true
+    client.getSharedExamDate().then(date => { if (active) setExamDate(validDay(date) ? date : DEFAULT_EXAM_DATE) }).catch(() => { if (active) setExamDate(DEFAULT_EXAM_DATE) }).finally(() => { if (active) setLoading(false) })
+    return () => { active = false }
+  }, [client])
+  const save = async event => {
+    event.preventDefault()
+    setBusy(true); setNotice(null)
+    try {
+      await client.setSharedExamDate(examDate)
+      try { localStorage.setItem('n3vjit_shared_exam_date', examDate) } catch {}
+      window.dispatchEvent(new Event('n3vjit:shared-exam-date'))
+      setNotice({ text: 'Đã cập nhật ngày thi chung cho toàn bộ học viên.' })
+    } catch (error) {
+      setNotice({ error: true, text: error.code === 'invalid_exam_date' ? 'Ngày thi phải là ngày hợp lệ trong tương lai.' : error.code === 'admin_required' ? 'Chỉ quản trị viên mới có thể cập nhật ngày thi.' : 'Chưa lưu được ngày thi. Kiểm tra migration Supabase và thử lại.' })
+    } finally { setBusy(false) }
+  }
+  return <div className="admin-page"><div className="page-heading"><div><p className="eyebrow">QUẢN TRỊ · LỘ TRÌNH</p><h1>Cài đặt ngày thi chung</h1><p className="page-description">Ngày này dùng cho countdown của toàn bộ học viên. Học viên không thể đặt ngày thi riêng.</p></div></div>{notice && <p className={`notice ${notice.error ? 'notice-error' : 'notice-success'} mb-5`} role={notice.error ? 'alert' : 'status'}>{notice.text}</p>}<form className="panel admin-exam-date-form" onSubmit={save}><label htmlFor="admin-shared-exam-date">Ngày thi JLPT N3 chung</label><input id="admin-shared-exam-date" type="date" required disabled={loading || busy} value={examDate} onChange={event => setExamDate(event.target.value)} /><p className="auth-field-hint">Countdown trang lộ trình và thông báo chào mừng sẽ dùng ngày này cho tất cả học viên.</p><button type="submit" className="btn btn-primary" disabled={loading || busy || !examDate}>{loading ? 'Đang tải…' : busy ? 'Đang lưu…' : 'Lưu ngày thi chung'}</button></form></div>
 }
 
 function AdminUsers() {
